@@ -42,19 +42,27 @@ public final class ShardingDatabasesConfigurationPrecise implements ExampleConfi
     
     private ShardingRuleConfiguration createShardingRuleConfiguration() {
         ShardingRuleConfiguration result = new ShardingRuleConfiguration();
+        //设置各个表的一些规则
         result.getTables().add(getOrderTableRuleConfiguration());
         result.getTables().add(getOrderItemTableRuleConfiguration());
+        //广播表
         result.getBroadcastTables().add("t_address");
+        //分库所依赖的列，分库算法名称
         result.setDefaultDatabaseShardingStrategy(new StandardShardingStrategyConfiguration("user_id", "inline"));
         Properties props = new Properties();
+        //分库规则表达式
         props.setProperty("algorithm-expression", "demo_ds_${user_id % 2}");
+        //设置inline这个分库算法的分库规则
         result.getShardingAlgorithms() .put("inline", new ShardingSphereAlgorithmConfiguration("INLINE", props));
+        //设置雪花算法
         result.getKeyGenerators().put("snowflake", new ShardingSphereAlgorithmConfiguration("SNOWFLAKE", getProperties()));
         return result;
     }
     
     private static ShardingTableRuleConfiguration getOrderTableRuleConfiguration() {
+        //t_order表
         ShardingTableRuleConfiguration result = new ShardingTableRuleConfiguration("t_order");
+        //设置order_id为雪花算法自动生成
         result.setKeyGenerateStrategy(new KeyGenerateStrategyConfiguration("order_id", "snowflake"));
         return result;
     }
@@ -67,6 +75,7 @@ public final class ShardingDatabasesConfigurationPrecise implements ExampleConfi
     
     private static Map<String, DataSource> createDataSourceMap() {
         Map<String, DataSource> result = new HashMap<>();
+        //设置数据源名称和数据源
         result.put("demo_ds_0", DataSourceUtil.createDataSource("demo_ds_0"));
         result.put("demo_ds_1", DataSourceUtil.createDataSource("demo_ds_1"));
         return result;

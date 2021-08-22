@@ -24,6 +24,7 @@ import org.apache.shardingsphere.infra.config.algorithm.ShardingSphereAlgorithmC
 import org.apache.shardingsphere.sharding.api.config.ShardingRuleConfiguration;
 import org.apache.shardingsphere.sharding.api.config.rule.ShardingTableRuleConfiguration;
 import org.apache.shardingsphere.sharding.api.config.strategy.keygen.KeyGenerateStrategyConfiguration;
+import org.apache.shardingsphere.sharding.api.config.strategy.sharding.ShardingStrategyConfiguration;
 import org.apache.shardingsphere.sharding.api.config.strategy.sharding.StandardShardingStrategyConfiguration;
 
 import javax.sql.DataSource;
@@ -47,7 +48,15 @@ public final class ShardingTablesConfigurationPrecise implements ExampleConfigur
         result.getBindingTableGroups().add("t_order, t_order_item");
         result.getBroadcastTables().add("t_address");
         result.setDefaultTableShardingStrategy(new StandardShardingStrategyConfiguration("order_id", "standard_test_tbl"));
-        result.getShardingAlgorithms() .put("standard_test_tbl", new ShardingSphereAlgorithmConfiguration("STANDARD_TEST_TBL", new Properties()));
+//        Properties tOrderInlineProps = new Properties();
+//        tOrderInlineProps.setProperty("algorithm-expression", "t_order_${user_id % 2}");
+//        ShardingSphereAlgorithmConfiguration tOrderInline = new ShardingSphereAlgorithmConfiguration("INLINE", tOrderInlineProps);
+//        Properties tOrderItemInlineProps = new Properties();
+//        tOrderInlineProps.setProperty("algorithm-expression", "t_order_item_${user_id % 2}");
+//        ShardingSphereAlgorithmConfiguration tOrderItemInline = new ShardingSphereAlgorithmConfiguration("INLINE", tOrderItemInlineProps);
+        result.getShardingAlgorithms().put("standard_test_tbl", new ShardingSphereAlgorithmConfiguration("STANDARD_TEST_TBL", new Properties()));
+//        result.getShardingAlgorithms().put("t_order_inline", tOrderInline);
+//        result.getShardingAlgorithms().put("t_order_item_inline", tOrderItemInline);
         result.getKeyGenerators().put("snowflake", new ShardingSphereAlgorithmConfiguration("SNOWFLAKE", getProperties()));
         return result;
     }
@@ -55,12 +64,14 @@ public final class ShardingTablesConfigurationPrecise implements ExampleConfigur
     private static ShardingTableRuleConfiguration getOrderTableRuleConfiguration() {
         ShardingTableRuleConfiguration result = new ShardingTableRuleConfiguration("t_order", "demo_ds.t_order_${[0, 1]}");
         result.setKeyGenerateStrategy(new KeyGenerateStrategyConfiguration("order_id", "snowflake"));
+//        result.setTableShardingStrategy(new StandardShardingStrategyConfiguration("user_id", "t_order_inline"));
         return result;
     }
     
     private static ShardingTableRuleConfiguration getOrderItemTableRuleConfiguration() {
         ShardingTableRuleConfiguration result = new ShardingTableRuleConfiguration("t_order_item", "demo_ds.t_order_item_${[0, 1]}");
         result.setKeyGenerateStrategy(new KeyGenerateStrategyConfiguration("order_item_id", "snowflake"));
+//        result.setTableShardingStrategy(new StandardShardingStrategyConfiguration("user_id", "t_order_item_inline"));
         return result;
     }
     
