@@ -412,6 +412,50 @@ INSERT INTO t_order_item (order_item_id, order_id, user_id, status) VALUES (10, 
 
 #### 2.7、加密示例
 
+##### 2.7.1、打开examples->sharding-example->other-feature-example->encrypt-example->encrypt-raw-jdbc-example
+
+##### 2.7.2、选择YamlConfigurationExampleMain类
+
+
+##### 2.7.3、配置文件
+
+```yaml
+dataSources:
+  unique_ds:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.jdbc.Driver
+    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
+    username: root
+    password:
+
+rules:
+- !ENCRYPT
+  tables:
+    t_user:
+      columns:
+        user_name:
+          plainColumn: user_name_plain
+          cipherColumn: user_name
+          encryptorName: name_encryptor
+        pwd:
+          cipherColumn: pwd
+          assistedQueryColumn: assisted_query_pwd
+          encryptorName: pwd_encryptor
+  encryptors:
+    name_encryptor:
+      type: AES
+      props:
+        aes-key-value: 123456abc
+    pwd_encryptor:
+      type: assistedTest
+```
+
+可以看出，t_user表的user_name才有AES加密，
+
+##### 2.7.4、运行效果
+
+![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210823192346.png)
+
 
 
 
