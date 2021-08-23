@@ -43,4 +43,4 @@ rules:
       readDataSourceNames: [read_ds_0, read_ds_1]
 
 props:
-  sql-show: false
+  sql-show: true
