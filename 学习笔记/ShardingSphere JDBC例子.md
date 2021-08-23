@@ -14,7 +14,9 @@
 
 #### 1.2、fork出一个仓库
 
-fork 这个上面的源码仓库，并在5.0.0-beta 这个tag上创建一个自己的学习分支
+fork 这个上面的源码仓库，并在5.0.0-beta-release 这个分支上创建一个自己的学习分支
+
+>因为5.0.0-beta-release分支已被删除，所以可以直接在主分支上创建学习分支
 
 >?为什么需要fork和建立自己的分支呢？
 >因为我们在源码学习过程中会debug源码，会写一些自己的理解、注释，甚至修改代码、提pr等等，因此fork一个自己的仓库也是很有必要的
@@ -41,11 +43,13 @@ mvn install -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
 
 #### 1.5、添加examples
 
-通过idea右边maven +号，把examples目录导进来，因为5.0.0-beta的examples pom没有编写好，我们需要对examples根目录pom文件进行修改
+ 通过idea右边maven +号，把examples目录导进来，因为5.0.0-beta的examples pom没有编写好，我们需要对examples根目录pom文件进行修改
 
 ```
 <version>5.0.0-alpha</version>
 ```
+
+>如果不是5.0.0-beta则不需要修改
 
 修改后再次刷新maven即可
 
@@ -60,6 +64,8 @@ mvn install -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
 在examples/src/resources目录下，我们可以看到一个manual_schema.sql的文件，执行该数据库脚本后，即可完成示例数据库的初始化
 
 >推荐使用本地mysql，3306端口，用户名root，无密码，这样就和源码数据源配置相同
+
+
 
 
 #### 2.2、examples的目录示例
@@ -77,7 +83,7 @@ mvn install -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
 | proxy(Pending)                                                                                          | 演示使用 ShardingSphere-Proxy                         |
 | [docker](https://github.com/apache/shardingsphere/tree/5.0.0-beta/examples/docker/docker-compose.md)     | |
 
-本节会对分片例子进行演示和分析
+
 
 #### 2.3、分库示例
 
@@ -295,6 +301,8 @@ rules:
 
 可以看到，t_order和t_order_item数据先按user_id分到demo_ds_0和demo_ds_1上，再按order_id分到t_order_0还是t_order_1,t_order_item_0还是t_order_item_1
 
+
+
 #### 2.6、读写分离示例
 
 ##### 2.6.1、打开examples->sharding-example->sharding-raw-jdbc-example
@@ -409,6 +417,8 @@ INSERT INTO t_order_item (order_item_id, order_id, user_id, status) VALUES (10, 
 ```
 
 从挑选的几段日志可以看出，创建表和插入数据全部命中write_ds，而查询则命中read_ds_0或read_ds_1，同时具有负载均衡功能
+
+
 
 #### 2.7、加密示例
 
