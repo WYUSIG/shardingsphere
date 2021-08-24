@@ -1,20 +1,28 @@
 ## ShardingSphere源码学习-5.0.0-beta
 
+
+
 ### 1、运行源码中的proxy
+
+
 
 #### 1.1(可选)、启动zk
 
 >我使用的是3.6.2版本，端口为默认的2181
-> 
-> 可选：即不启动zk也可以
+>
+>可选：即不启动zk也可以
 
-#### 打开example
+
+
+#### 1.2、打开example
 
 打开examples->shardingsphere-proxy-example->shardingsphere-proxy-boot-mybatis-example
 
 复制该模块下面的resources/conf/server.yaml文件
 
-#### 备份proxy原有配置文件
+
+
+#### 1.3、备份proxy原有配置文件
 
 打开shardingsphere-proxy -> shardingsphere-proxy-bootstrapt
 
@@ -22,7 +30,9 @@
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210824005412.png)
 
-#### 启动proxy
+
+
+#### 1.4、启动proxy
 
 删除shardingsphere-proxy-bootstrapt resources/conf里面的文件，同时粘贴之前复制example的server.yaml文件到conf文件夹
 
@@ -34,7 +44,11 @@
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210824005829.png)
 
+
+
 ### 2、proxy分库分表示例
+
+
 
 #### 2.1、准备分库分表配置文件
 
@@ -45,6 +59,8 @@
 打开shardingsphere-proxy -> shardingsphere-proxy-bootstrapt
 
 把刚刚复制的文件夹粘贴到到shardingsphere-proxy-bootstrapt模块的resources目录中
+
+
 
 #### 2.2、分库分表规则
 
@@ -130,13 +146,13 @@ rules:
 
 可以看到ShardingSphere Proxy模拟出一个供客户端连接的数据库：sharding_db。
 
-<i>分库规则:</i>
+**分库规则：**
 
 在defaultDatabaseStrategy配置项可以看到，分库所依赖列为user_id，分库算法为database_inline，
 
 从shardingAlgorithms.database_inline中可以看出，ds_${user_id % 2}，按照user_id对2取模进行分库。
 
-<i>分表规则:</i>
+**分表规则：**
 
 i: 在rules.tables.t_order.tableStrategy配置项可以看到，t_order分表所依赖列为order_id，分表算法为t_order_inline，
 
@@ -146,11 +162,15 @@ ii: 在rules.tables.t_order_item.tableStrategy配置项可以看到，t_order_it
 
 从rules.shardingAlgorithms.t_order_item_inline配置项中看到t_order_item_${order_id % 2}，按照order_id对2取模进行分表。
 
+
+
 #### 2.3、重新运行Proxy
 
 删除shardingsphere-proxy -> shardingsphere-proxy-bootstrapt的target文件夹
 
 重新运行Bootstrap类
+
+
 
 #### 2.4、在example删除数据处打上断点及去掉事务注解
 
@@ -180,9 +200,13 @@ public class OrderServiceImpl implements ExampleService {
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210824223524.png)
 
+
+
 #### 2.5、运行proxy分库分表客户端示例
 
 debug启动SpringBootStarterExample，待代码运行到断点
+
+
 
 #### 2.6、运行效果
 
@@ -192,16 +216,17 @@ demo_ds_0数据情况：
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210824224926.png)
 
-demo_ds_1运行情况：
+demo_ds_1数据情况：
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210824225142.png)
-
-demo_ds_1
 
 可以看到数据先按user_id分到不同库，再按order_id分到不同表
 
 
+
 ### 3、proxy读写示例
+
+
 
 #### 3.1、准备配置文件
 
@@ -236,9 +261,13 @@ props:
 
 就是props.sql-show改成true
 
+
+
 #### 3.2、重新运行proxy
 
 因为我们上一步修改了server.yaml配置文件，删除proxy的target目录，重新运行
+
+
 
 #### 3.3、读写分离配置规则
 
@@ -294,6 +323,8 @@ props:
 写库为：write_ds
 
 读库为：read_ds_0、read_ds_1
+
+
 
 #### 3.4、给伪从库初始数据
 
@@ -359,6 +390,8 @@ INSERT INTO t_order_item (order_item_id, order_id, user_id, status) VALUES (9, 9
 INSERT INTO t_order_item (order_item_id, order_id, user_id, status) VALUES (10, 10, 10, 'INSERT_TEST');
 ```
 
+
+
 #### 3.5、修改示例的数据源
 
 打开shardingsphere-proxy-boot-mybatis-example
@@ -377,7 +410,9 @@ spring.datasource.password=root
 
 就是把sharding_db改成readwrite-splitting_db
 
-#### 3.5、运行观察日志
+
+
+#### 3.5、运行观察proxy日志
 
 运行shardingsphere-proxy-boot-mybatis-example
 
@@ -392,13 +427,20 @@ spring.datasource.password=root
 从挑选的几段proxy日志可以看出，创建表和插入数据全部命中write_ds，而查询则命中read_ds_0或read_ds_1，同时具有负载均衡功能
 
 
+
 ### 4、proxy加密示例
+
+
 
 #### 4.1、准备配置文件
 
 在proxy conf目录下新建config-encrypt.yaml文件
 
+
+
 #### 4.2、加密配置
+
+config-encrypt.yaml文件里写上以下配置：
 
 ```yaml
 schemaName: encrypt_db
@@ -438,6 +480,8 @@ rules:
 
 同时对t_user表的user_id进行AES加密，pwd进行md5加密
 
+
+
 #### 4.3、修改示例的数据源
 
 打开shardingsphere-proxy-boot-mybatis-example
@@ -455,6 +499,8 @@ spring.datasource.password=root
 ```
 
 就是把readwrite-splitting_db改成encrypt_db
+
+
 
 #### 4.4、修改example的依赖查找的ExampleService
 
@@ -487,6 +533,10 @@ private static ExampleService getExampleService(final ConfigurableApplicationCon
 
 新增UserMapper.xml
 
+同时给org.apache.shardingsphere.example.core.mybatis.repository.MybatisUserRepository标注@Mapper注解
+
+
+
 #### 4.4、在example删除数据处打上断点及去掉事务注解
 
 打开examples->shardingsphere-proxy-example->shardingsphere-proxy-boot-mybatis-example
@@ -496,17 +546,23 @@ private static ExampleService getExampleService(final ConfigurableApplicationCon
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210825002255.png)
 
+
+
 #### 4.5、重新运行proxy
 
 因为我们新增了配置文件，删除proxy的target目录，重新运行。
+
+
 
 #### 4.6、运行示例程序
 
 debug运行shardingsphere-proxy-boot-mybatis-example，待代码运行到断点，观察数据库
 
+
+
 #### 4.7、运行效果
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210825002334.png)
 
-
+可以看到user_name已经进行AES加密，pwd已经进行MD5加密
 
