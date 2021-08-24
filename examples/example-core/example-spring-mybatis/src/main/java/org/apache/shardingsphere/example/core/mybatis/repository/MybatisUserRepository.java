@@ -17,7 +17,9 @@
 
 package org.apache.shardingsphere.example.core.mybatis.repository;
 
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.shardingsphere.example.core.api.repository.UserRepository;
 
+@Mapper
 public interface MybatisUserRepository extends UserRepository {
 }

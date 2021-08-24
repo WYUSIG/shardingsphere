@@ -60,6 +60,7 @@ public class SpringBootStarterExample {
     }
     
     private static ExampleService getExampleService(final ConfigurableApplicationContext applicationContext) {
-        return applicationContext.getBean(ExampleService.class);
+//        return applicationContext.getBean(ExampleService.class);
+        return applicationContext.getBean("encrypt", ExampleService.class);
     }
 }

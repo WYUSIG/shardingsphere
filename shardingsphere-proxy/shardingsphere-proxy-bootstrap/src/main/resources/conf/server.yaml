@@ -51,6 +51,6 @@ props:
   proxy-transaction-type: LOCAL
   proxy-opentracing-enabled: false
   proxy-hint-enabled: false
-  sql-show: false
+  sql-show: true
   check-table-metadata-enabled: false
 
