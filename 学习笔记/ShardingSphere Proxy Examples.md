@@ -24,7 +24,7 @@
 
 #### 1.3、备份proxy原有配置文件
 
-打开shardingsphere-proxy -> shardingsphere-proxy-bootstrapt
+打开shardingsphere-proxy -> shardingsphere-proxy-bootstrap
 
 把该模块原有conf文件备份到一个conf_tmp文件夹，如图所示：
 
@@ -34,7 +34,7 @@
 
 #### 1.4、启动proxy
 
-删除shardingsphere-proxy-bootstrapt resources/conf里面的文件，同时粘贴之前复制example的server.yaml文件到conf文件夹
+删除shardingsphere-proxy-bootstrap resources/conf里面的文件，同时粘贴之前复制example的server.yaml文件到conf文件夹
 
 运行 Bootstrap 类
 
@@ -56,9 +56,9 @@
 
 复制该模块下面的resources/conf文件夹
 
-打开shardingsphere-proxy -> shardingsphere-proxy-bootstrapt
+打开shardingsphere-proxy -> shardingsphere-proxy-bootstrap
 
-把刚刚复制的文件夹粘贴到到shardingsphere-proxy-bootstrapt模块的resources目录中
+把刚刚复制的文件夹粘贴到到shardingsphere-proxy-bootstrap模块的resources目录中
 
 
 
@@ -166,7 +166,7 @@ ii: 在rules.tables.t_order_item.tableStrategy配置项可以看到，t_order_it
 
 #### 2.3、重新运行Proxy
 
-删除shardingsphere-proxy -> shardingsphere-proxy-bootstrapt的target文件夹
+删除shardingsphere-proxy -> shardingsphere-proxy-bootstrap的target文件夹
 
 重新运行Bootstrap类
 
