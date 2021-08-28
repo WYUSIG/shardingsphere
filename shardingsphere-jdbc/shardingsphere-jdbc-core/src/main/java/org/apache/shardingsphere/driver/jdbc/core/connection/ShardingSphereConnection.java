@@ -51,18 +51,22 @@ import java.util.Map;
  */
 @Getter
 public final class ShardingSphereConnection extends AbstractConnectionAdapter implements ExecutorJDBCManager {
-    
+
+    //所有数据库
     private final Map<String, DataSource> dataSourceMap;
-    
+
+    //元数据上下文
     private final MetaDataContexts metaDataContexts;
-    
+
+    //事务类型：local、xa、base
     private final TransactionType transactionType;
-    
+
+    //分布式事务管理器
     private final ShardingTransactionManager shardingTransactionManager;
     
     @Getter(AccessLevel.NONE)
     private boolean autoCommit = true;
-    
+
     public ShardingSphereConnection(final Map<String, DataSource> dataSourceMap,
                                     final MetaDataContexts metaDataContexts, final TransactionContexts transactionContexts, final TransactionType transactionType) {
         this.dataSourceMap = dataSourceMap;
@@ -177,12 +181,16 @@ public final class ShardingSphereConnection extends AbstractConnectionAdapter im
     public DatabaseMetaData getMetaData() {
         return new ShardingSphereDatabaseMetaData(this);
     }
-    
+
+    /**
+     * 实现jdbc接口，获取预处理statement
+     * @param sql sql语句
+     */
     @Override
     public PreparedStatement prepareStatement(final String sql) throws SQLException {
         return new ShardingSpherePreparedStatement(this, sql);
     }
-    
+
     @Override
     public PreparedStatement prepareStatement(final String sql, final int resultSetType, final int resultSetConcurrency) throws SQLException {
         return new ShardingSpherePreparedStatement(this, sql, resultSetType, resultSetConcurrency);

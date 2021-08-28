@@ -277,3 +277,196 @@ public final class ShardingSphereDataSource extends AbstractUnsupportedOperation
 
 ### ShardingSphereConnection
 
+```java
+package org.apache.shardingsphere.driver.jdbc.core.connection;
+
+public final class ShardingSphereConnection extends AbstractConnectionAdapter implements ExecutorJDBCManager {
+
+    //所有数据库
+    private final Map<String, DataSource> dataSourceMap;
+
+    //元数据上下文
+    private final MetaDataContexts metaDataContexts;
+
+    //事务类型：local、xa、base
+    private final TransactionType transactionType;
+
+    //分布式事务管理器
+    private final ShardingTransactionManager shardingTransactionManager;
+
+    @Getter(AccessLevel.NONE)
+    private boolean autoCommit = true;
+
+    public ShardingSphereConnection(final Map<String, DataSource> dataSourceMap,
+                                    final MetaDataContexts metaDataContexts, final TransactionContexts transactionContexts, final TransactionType transactionType) {
+        this.dataSourceMap = dataSourceMap;
+        this.metaDataContexts = metaDataContexts;
+        this.transactionType = transactionType;
+        shardingTransactionManager = transactionContexts.getDefaultTransactionManagerEngine().getTransactionManager(transactionType);
+    }
+
+    /**
+     * 实现jdbc接口，获取预处理statement
+     * @param sql sql语句
+     */
+    @Override
+    public PreparedStatement prepareStatement(final String sql) throws SQLException {
+        return new ShardingSpherePreparedStatement(this, sql);
+    }
+
+    /**
+     * 实现jdbc接口，获取statement
+     */
+    @Override
+    public Statement createStatement() {
+        return new ShardingSphereStatement(this);
+    }
+}
+```
+
+通过源码可以发现，ShardingSphereConnection主要是创建ShardingSpherePreparedStatement、ShardingSphereStatement，并通过this参数把信息全部传到Statement，同时还涉及事务的commit、rollback，这里就不探讨
+
+### ShardingSpherePreparedStatement
+
+```java
+package org.apache.shardingsphere.driver.jdbc.core.statement;
+
+public final class ShardingSpherePreparedStatement extends AbstractPreparedStatementAdapter {
+
+    /**
+     * ShardingSpherePreparedStatement构造方法
+     * @param connection ShardingSphereConnection
+     * @param sql sql语句
+     * @param resultSetType ResultSet类型，一般为ResultSet.TYPE_FORWARD_ONLY，一次只读一条记录，读后释放
+     * @param resultSetConcurrency ResultSet是否只读
+     * @param resultSetHoldability 提交事务后，ResultSet是否依然可读
+     * @param returnGeneratedKeys 是否返回生成的主键
+     * @throws SQLException sql异常
+     */
+    private ShardingSpherePreparedStatement(final ShardingSphereConnection connection, final String sql,
+                                            final int resultSetType, final int resultSetConcurrency, final int resultSetHoldability, final boolean returnGeneratedKeys) throws SQLException {
+        if (Strings.isNullOrEmpty(sql)) {
+            throw new SQLException(SQLExceptionConstant.SQL_STRING_NULL_OR_EMPTY);
+        }
+        //ShardingSphereConnection,含有元信息，事务
+        this.connection = connection;
+        //元信息上下文
+        metaDataContexts = connection.getMetaDataContexts();
+        this.sql = sql;
+        statements = new ArrayList<>();
+        parameterSets = new ArrayList<>();
+        //sql解析引擎
+        ShardingSphereSQLParserEngine sqlParserEngine = new ShardingSphereSQLParserEngine(
+                DatabaseTypeRegistry.getTrunkDatabaseTypeName(metaDataContexts.getDefaultMetaData().getResource().getDatabaseType()));
+        //解析sql, 获得一个SQLStatement，SQLStatement有很多实现类，分别对应各类sql语句，如CreateDatabaseStatement、InsertStatement
+        sqlStatement = sqlParserEngine.parse(sql, true);
+        //把SQLStatement包装成ParameterMetaData，相当于sql中的问号，占位符信息
+        parameterMetaData = new ShardingSphereParameterMetaData(sqlStatement);
+        statementOption = returnGeneratedKeys ? new StatementOption(true) : new StatementOption(resultSetType, resultSetConcurrency, resultSetHoldability);
+        //jdbc执行器
+        JDBCExecutor jdbcExecutor = new JDBCExecutor(metaDataContexts.getExecutorEngine(), connection.isHoldTransaction());
+        //驱动执行器，包含了jdbc执行器
+        driverJDBCExecutor = new DriverJDBCExecutor(metaDataContexts, jdbcExecutor);
+        rawExecutor = new RawExecutor(metaDataContexts.getExecutorEngine(), connection.isHoldTransaction(), metaDataContexts.getProps());
+        // TODO Consider FederateRawExecutor
+        federateExecutor = new FederateJDBCExecutor(DefaultSchema.LOGIC_NAME, metaDataContexts.getOptimizeContextFactory(), metaDataContexts.getProps(), jdbcExecutor);
+        //sql批处理执行器
+        batchPreparedStatementExecutor = new BatchPreparedStatementExecutor(metaDataContexts, jdbcExecutor);
+        //内核处理器
+        kernelProcessor = new KernelProcessor();
+    }
+
+    @Override
+    public ResultSet executeQuery() throws SQLException {
+        ResultSet result;
+        try {
+            //执行前先清空之前set的参数
+            clearPrevious();
+            //创建执行上下文
+            executionContext = createExecutionContext();
+            //执行返回结果
+            List<QueryResult> queryResults = executeQuery0();
+            //合并结果
+            MergedResult mergedResult = mergeQuery(queryResults);
+            result = new ShardingSphereResultSet(getResultSetsForShardingSphereResultSet(), mergedResult, this, executionContext);
+        } finally {
+            clearBatch();
+        }
+        currentResultSet = result;
+        return result;
+    }
+}
+```
+
+这里可以看到ShardingSpherePreparedStatement实现相当复杂，包含各种执行器、上下文，这里看一个比较重要的执行上下文
+
+```java
+public class ShardingSpherePreparedStatement {
+    private ExecutionContext createExecutionContext() {
+        //进一步解析sql
+        LogicSQL logicSQL = createLogicSQL();
+        //检查sql
+        SQLCheckEngine.check(logicSQL.getSqlStatementContext().getSqlStatement(), logicSQL.getParameters(),
+                metaDataContexts.getDefaultMetaData().getRuleMetaData().getRules(), DefaultSchema.LOGIC_NAME, metaDataContexts.getMetaDataMap(), null);
+        //通过内核处理器创建执行上下文
+        ExecutionContext result = kernelProcessor.generateExecutionContext(logicSQL, metaDataContexts.getDefaultMetaData(), metaDataContexts.getProps());
+        //找出所有的需要生成主键的，并把生成结果放到generatedValues
+        findGeneratedKey(result).ifPresent(generatedKey -> generatedValues.addAll(generatedKey.getGeneratedValues()));
+        //返回执行上下文
+        return result;
+    }
+
+    private LogicSQL createLogicSQL() {
+        //获取新set的PrepareStatement参数, 如setString(index, str)
+        List<Object> parameters = new ArrayList<>(getParameters());
+        ShardingSphereSchema schema = metaDataContexts.getDefaultMetaData().getSchema();
+        //通过解析出来的sqlStatement、参数、ShardingSphereSchema构造出SQLStatement上下文，这个上下文很多信息，也有很多实现类，分DDl、DML等
+        SQLStatementContext<?> sqlStatementContext = SQLStatementContextFactory.newInstance(schema, parameters, sqlStatement);
+        //返回LogicSQL，意为解析好的sql
+        return new LogicSQL(sqlStatementContext, sql, parameters);
+    }
+}
+```
+
+```java
+public class KernelProcessor {
+    public ExecutionContext generateExecutionContext(final LogicSQL logicSQL, final ShardingSphereMetaData metaData, final ConfigurationProperties props) {
+        //创建路由上下文
+        RouteContext routeContext = route(logicSQL, metaData, props);
+        //重写sql结果
+        SQLRewriteResult rewriteResult = rewrite(logicSQL, metaData, props, routeContext);
+        //创建ExecutionContext
+        ExecutionContext result = createExecutionContext(logicSQL, metaData, routeContext, rewriteResult);
+        //如果开启打印sql了的话，打印sql
+        logSQL(logicSQL, props, result);
+        return result;
+    }
+}
+```
+
+可以看到，到执行上下文创建完成，执行所需的东西都基本有了，我们可以看以下ExecutionContext类
+
+```java
+public final class ExecutionContext {
+    
+    //解析好的SQLStatement上下文
+    private final SQLStatementContext<?> sqlStatementContext;
+    
+    //执行单元集合
+    private final Collection<ExecutionUnit> executionUnits;
+    
+    //路由上下文
+    private final RouteContext routeContext;
+    
+    public ExecutionContext(final SQLStatementContext<?> sqlStatementContext, final ExecutionUnit executionUnit, final RouteContext routeContext) {
+        this(sqlStatementContext, Collections.singletonList(executionUnit), routeContext);
+    }
+}
+```
+
+因为ShardingSphere代码实在庞大与复杂，所以只能先介绍这些，我们从这些流程中已经可以瞥见ShardingSphere的大致执行流程
+
+![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210829012633.png)
+
+
+

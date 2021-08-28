@@ -43,9 +43,13 @@ public final class KernelProcessor {
      * @return execution context
      */
     public ExecutionContext generateExecutionContext(final LogicSQL logicSQL, final ShardingSphereMetaData metaData, final ConfigurationProperties props) {
+        //创建路由上下文
         RouteContext routeContext = route(logicSQL, metaData, props);
+        //重写sql结果
         SQLRewriteResult rewriteResult = rewrite(logicSQL, metaData, props, routeContext);
+        //创建ExecutionContext
         ExecutionContext result = createExecutionContext(logicSQL, metaData, routeContext, rewriteResult);
+        //如果开启打印sql了的话，打印sql
         logSQL(logicSQL, props, result);
         return result;
     }

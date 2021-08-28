@@ -145,28 +145,47 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
             final ShardingSphereConnection connection, final String sql, final int resultSetType, final int resultSetConcurrency, final int resultSetHoldability) throws SQLException {
         this(connection, sql, resultSetType, resultSetConcurrency, resultSetHoldability, false);
     }
-    
+
+    /**
+     * ShardingSpherePreparedStatement构造方法
+     * @param connection ShardingSphereConnection
+     * @param sql sql语句
+     * @param resultSetType ResultSet类型，一般为ResultSet.TYPE_FORWARD_ONLY，一次只读一条记录，读后释放
+     * @param resultSetConcurrency ResultSet是否只读
+     * @param resultSetHoldability 提交事务后，ResultSet是否依然可读
+     * @param returnGeneratedKeys 是否返回生成的主键
+     * @throws SQLException sql异常
+     */
     private ShardingSpherePreparedStatement(final ShardingSphereConnection connection, final String sql,
                                             final int resultSetType, final int resultSetConcurrency, final int resultSetHoldability, final boolean returnGeneratedKeys) throws SQLException {
         if (Strings.isNullOrEmpty(sql)) {
             throw new SQLException(SQLExceptionConstant.SQL_STRING_NULL_OR_EMPTY);
         }
+        //ShardingSphereConnection,含有元信息，事务
         this.connection = connection;
+        //元信息上下文
         metaDataContexts = connection.getMetaDataContexts();
         this.sql = sql;
         statements = new ArrayList<>();
         parameterSets = new ArrayList<>();
+        //sql解析引擎
         ShardingSphereSQLParserEngine sqlParserEngine = new ShardingSphereSQLParserEngine(
                 DatabaseTypeRegistry.getTrunkDatabaseTypeName(metaDataContexts.getDefaultMetaData().getResource().getDatabaseType()));
+        //解析sql, 获得一个SQLStatement，SQLStatement有很多实现类，分别对应各类sql语句，如CreateDatabaseStatement、InsertStatement
         sqlStatement = sqlParserEngine.parse(sql, true);
+        //把SQLStatement包装成ParameterMetaData，相当于sql中的问号，占位符信息
         parameterMetaData = new ShardingSphereParameterMetaData(sqlStatement);
         statementOption = returnGeneratedKeys ? new StatementOption(true) : new StatementOption(resultSetType, resultSetConcurrency, resultSetHoldability);
+        //jdbc执行器
         JDBCExecutor jdbcExecutor = new JDBCExecutor(metaDataContexts.getExecutorEngine(), connection.isHoldTransaction());
+        //驱动执行器，包含了jdbc执行器
         driverJDBCExecutor = new DriverJDBCExecutor(metaDataContexts, jdbcExecutor);
         rawExecutor = new RawExecutor(metaDataContexts.getExecutorEngine(), connection.isHoldTransaction(), metaDataContexts.getProps());
         // TODO Consider FederateRawExecutor
         federateExecutor = new FederateJDBCExecutor(DefaultSchema.LOGIC_NAME, metaDataContexts.getOptimizeContextFactory(), metaDataContexts.getProps(), jdbcExecutor);
+        //sql批处理执行器
         batchPreparedStatementExecutor = new BatchPreparedStatementExecutor(metaDataContexts, jdbcExecutor);
+        //内核处理器
         kernelProcessor = new KernelProcessor();
     }
     
@@ -174,9 +193,13 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     public ResultSet executeQuery() throws SQLException {
         ResultSet result;
         try {
+            //执行前先清空之前set的参数
             clearPrevious();
+            //创建执行上下文
             executionContext = createExecutionContext();
+            //执行返回结果
             List<QueryResult> queryResults = executeQuery0();
+            //合并结果
             MergedResult mergedResult = mergeQuery(queryResults);
             result = new ShardingSphereResultSet(getResultSetsForShardingSphereResultSet(), mergedResult, this, executionContext);
         } finally {
@@ -194,10 +217,12 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private List<QueryResult> executeQuery0() throws SQLException {
+        //如果元信息的rules里面有RawExecutionRule子类的
         if (metaDataContexts.getDefaultMetaData().getRuleMetaData().getRules().stream().anyMatch(each -> each instanceof RawExecutionRule)) {
             return rawExecutor.execute(createRawExecutionGroupContext(), executionContext.getSqlStatementContext(),
                     new RawSQLExecutorCallback()).stream().map(each -> (QueryResult) each).collect(Collectors.toList());
         }
+        //从执行上下文拿到路由上下文，判断是否需要联合多个库
         if (executionContext.getRouteContext().isFederated()) {
             return executeFederatedQuery();
         }
@@ -357,18 +382,26 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private ExecutionContext createExecutionContext() {
+        //进一步解析sql
         LogicSQL logicSQL = createLogicSQL();
+        //检查sql
         SQLCheckEngine.check(logicSQL.getSqlStatementContext().getSqlStatement(), logicSQL.getParameters(), 
                 metaDataContexts.getDefaultMetaData().getRuleMetaData().getRules(), DefaultSchema.LOGIC_NAME, metaDataContexts.getMetaDataMap(), null);
+        //通过内核处理器创建执行上下文
         ExecutionContext result = kernelProcessor.generateExecutionContext(logicSQL, metaDataContexts.getDefaultMetaData(), metaDataContexts.getProps());
+        //找出所有的需要生成主键的，并把生成结果放到generatedValues
         findGeneratedKey(result).ifPresent(generatedKey -> generatedValues.addAll(generatedKey.getGeneratedValues()));
+        //返回执行上下文
         return result;
     }
     
     private LogicSQL createLogicSQL() {
+        //获取新set的PrepareStatement参数, 如setString(index, str)
         List<Object> parameters = new ArrayList<>(getParameters());
         ShardingSphereSchema schema = metaDataContexts.getDefaultMetaData().getSchema();
+        //通过解析出来的sqlStatement、参数、ShardingSphereSchema构造出SQLStatement上下文，这个上下文很多信息，也有很多实现类，分DDl、DML等
         SQLStatementContext<?> sqlStatementContext = SQLStatementContextFactory.newInstance(schema, parameters, sqlStatement);
+        //返回LogicSQL，意为解析好的sql
         return new LogicSQL(sqlStatementContext, sql, parameters);
     }
     
