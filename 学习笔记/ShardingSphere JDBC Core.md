@@ -1,6 +1,8 @@
 ## ShardingSphere源码学习-5.0.0-beta
 
-### 前言
+
+
+##### 前言
 
 至于为什么会先选jdbc core开始看呢？因为在之前jdbc示例时可以看到创建DataSource代码如下：
 
@@ -46,13 +48,17 @@ public final class ShardingDatabasesConfigurationPrecise implements ExampleConfi
 就是这个ShardingSphereDataSourceFactory，这里已经可以瞥见ShardingSphere将会实现jdbc接口，然后实现自己的逻辑，这里我们就来探讨以下一条sql在ShardingSphere执行大致过程
 
 
+
 ### 1、jdbc core
+
+
 
 #### 1.1、目录截图
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210828165408.png)
 
 从目录可以看到jdbc的常见元素：datasource、connection、statement、resultset
+
 
 
 #### 1.2、ShardingSphere DataSource Factory
@@ -63,7 +69,9 @@ ShardingSphere提供了两种创建DataSource方式，普通java api和yaml
 
 下面我们来看一下这两种方式：
 
-#### 普通java api创建ShardingSphereDataSource
+
+
+#### 1.2.1、普通java api创建ShardingSphereDataSource
 
 ```java
 package org.apache.shardingsphere.driver.api;
@@ -110,7 +118,9 @@ public final class ShardingSphereDataSourceFactory {
 
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210828180757.png)
 
-#### yaml文件创建ShardingSphereDataSource
+
+
+#### 1.2.2、yaml文件创建ShardingSphereDataSource
 
 ```java
 package org.apache.shardingsphere.driver.api.yaml;
@@ -159,7 +169,9 @@ public class YamlRootRuleConfigurations implements YamlConfiguration {
 
 ShardingSphere DataSource Factory就先介绍到这里，下面我们来看一下ShardingSphereDataSource
 
-### ShardingSphereDataSource
+
+
+### 1.3、ShardingSphereDataSource
 
 ```java
 package org.apache.shardingsphere.driver.jdbc.core.datasource;
@@ -275,7 +287,9 @@ public final class ShardingSphereDataSource extends AbstractUnsupportedOperation
 
 其中，元信息上下文MetaDataContexts也有两个实现类，分别是基于注册中心管理的GovernanceMetaDataContexts和基于本地配置的StandardMetaDataContexts
 
-### ShardingSphereConnection
+
+
+### 1.4、ShardingSphereConnection
 
 ```java
 package org.apache.shardingsphere.driver.jdbc.core.connection;
@@ -326,7 +340,9 @@ public final class ShardingSphereConnection extends AbstractConnectionAdapter im
 
 通过源码可以发现，ShardingSphereConnection主要是创建ShardingSpherePreparedStatement、ShardingSphereStatement，并通过this参数把信息全部传到Statement，同时还涉及事务的commit、rollback，这里就不探讨
 
-### ShardingSpherePreparedStatement
+
+
+### 1.5、ShardingSpherePreparedStatement
 
 ```java
 package org.apache.shardingsphere.driver.jdbc.core.statement;
@@ -398,7 +414,7 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
 }
 ```
 
-这里可以看到ShardingSpherePreparedStatement实现相当复杂，包含各种执行器、上下文，这里看一个比较重要的执行上下文
+这里可以看到ShardingSpherePreparedStatement实现相当复杂，包含各种执行器、上下文，这里看一个比较重要的**执行上下文**
 
 ```java
 public class ShardingSpherePreparedStatement {
