@@ -52,7 +52,7 @@ public final class ShardingSphereDataSource extends AbstractUnsupportedOperation
     private final MetaDataContexts metaDataContexts;
 
     /**
-     * 分布式事务上下文
+     * 事务上下文
      */
     private final TransactionContexts transactionContexts;
     
@@ -62,16 +62,16 @@ public final class ShardingSphereDataSource extends AbstractUnsupportedOperation
                 Collections.singletonMap(DefaultSchema.LOGIC_NAME, dataSourceMap), Collections.singletonMap(DefaultSchema.LOGIC_NAME, configurations), props).build();
         //从元信息上下文获取xa分布式事务类型(有Atomikos、Narayana、Bitronix)
         String xaTransactionMangerType = metaDataContexts.getProps().getValue(ConfigurationPropertyKey.XA_TRANSACTION_MANAGER_TYPE);
-        //构造出分布式事务上下文
+        //构造出事务上下文
         transactionContexts = createTransactionContexts(metaDataContexts.getDefaultMetaData().getResource().getDatabaseType(), dataSourceMap, xaTransactionMangerType);
     }
 
     /**
-     * 构造出分布式事务上下文
+     * 构造出事务上下文
      * @param databaseType 数据库类型
      * @param dataSourceMap 所有数据库
      * @param xaTransactionMangerType xa分布式事务类型，有Atomikos、Narayana、Bitronix
-     * @return 分布式事务上下文
+     * @return 事务上下文
      */
     private TransactionContexts createTransactionContexts(final DatabaseType databaseType, final Map<String, DataSource> dataSourceMap, final String xaTransactionMangerType) {
         ShardingTransactionManagerEngine engine = new ShardingTransactionManagerEngine();
@@ -82,7 +82,7 @@ public final class ShardingSphereDataSource extends AbstractUnsupportedOperation
     /**
      * 实现jdbc的getConnection方法
      * @return 返回一个ShardingSphereConnection
-     * 我们可以看到，把所有数据库、元信息上下文、分布式事务上下文等继续传到下一层Connection
+     * 我们可以看到，把所有数据库、元信息上下文、事务上下文等继续传到下一层Connection
      */
     @Override
     public ShardingSphereConnection getConnection() {
