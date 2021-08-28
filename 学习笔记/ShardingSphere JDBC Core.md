@@ -414,7 +414,11 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
 }
 ```
 
-这里可以看到ShardingSpherePreparedStatement实现相当复杂，包含各种执行器、上下文，这里看一个比较重要的**执行上下文**
+这里可以看到ShardingSpherePreparedStatement实现相当复杂，包含各种执行器、上下文，这里有个比较有趣的是SQLStatement，它的实现类就是个各类sql语句，包含DDL、DML、DCL、DAL
+
+![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/20210829014642.png)
+
+再看一个比较重要的执行上下文
 
 ```java
 public class ShardingSpherePreparedStatement {
@@ -458,27 +462,27 @@ public class KernelProcessor {
         return result;
     }
 }
-```
 
-可以看到，到执行上下文创建完成，执行所需的东西都基本有了，我们可以看以下ExecutionContext类
-
-```java
 public final class ExecutionContext {
-    
+
     //解析好的SQLStatement上下文
     private final SQLStatementContext<?> sqlStatementContext;
-    
+
     //执行单元集合
     private final Collection<ExecutionUnit> executionUnits;
-    
+
     //路由上下文
     private final RouteContext routeContext;
-    
+
     public ExecutionContext(final SQLStatementContext<?> sqlStatementContext, final ExecutionUnit executionUnit, final RouteContext routeContext) {
         this(sqlStatementContext, Collections.singletonList(executionUnit), routeContext);
     }
 }
 ```
+
+可以看到，到执行上下文创建完成，执行所需的东西都基本有了
+
+
 
 因为ShardingSphere代码实在庞大与复杂，所以只能先介绍这些，我们从这些流程中已经可以瞥见ShardingSphere的大致执行流程
 
