@@ -31,12 +31,14 @@ public final class SQLStatementCacheLoader extends CacheLoader<String, SQLStatem
     private final SQLStatementParserExecutor sqlStatementParserExecutor;
     
     public SQLStatementCacheLoader(final String databaseType) {
+        //初始化SQL statement解析 执行器
         sqlStatementParserExecutor = new SQLStatementParserExecutor(databaseType);
     }
     
     @ParametersAreNonnullByDefault
     @Override
     public SQLStatement load(final String sql) {
+        //使用SQL statement解析 执行器 进行解析
         return sqlStatementParserExecutor.parse(sql);
     }
 }

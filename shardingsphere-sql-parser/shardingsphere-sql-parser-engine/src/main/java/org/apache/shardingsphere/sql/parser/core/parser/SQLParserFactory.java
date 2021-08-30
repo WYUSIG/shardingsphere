@@ -46,16 +46,20 @@ public final class SQLParserFactory {
      * @return SQL parser
      */
     public static SQLParser newInstance(final String databaseType, final String sql) {
+        //门面模式，根据数据库类型获取对应的sql解析门面对象
         SQLParserFacade sqlParserFacade = SQLParserFacadeRegistry.getInstance().getSQLParserFacade(databaseType);
         return createSQLParser(sql, sqlParserFacade);
     }
     
     private static SQLParser createSQLParser(final String sql, final SQLParserFacade sqlParserFacade) {
+        //从sql解析门面对象中取出词法解析器lexerClass，并对sql进行词法解析
+        //从sql解析门面对象中取出语法解析器ParserClass
         return createSQLParser(createTokenStream(sql, sqlParserFacade.getLexerClass()), sqlParserFacade.getParserClass());
     }
     
     @SneakyThrows(ReflectiveOperationException.class)
     private static SQLParser createSQLParser(final TokenStream tokenStream, final Class<? extends SQLParser> parserClass) {
+        //把词法解析结果进行语法解析
         return parserClass.getConstructor(TokenStream.class).newInstance(tokenStream);
     }
     

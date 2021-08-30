@@ -48,6 +48,11 @@ public final class SQLParserEngine {
      * @return parse tree
      */
     public ParseTree parse(final String sql, final boolean useCache) {
+        /**
+         * 如果使用缓存，则从parseTreeCache取语法树，如果加载不到ParseTreeCacheLoader进行加载
+         * 如果不使用缓存，则使用SQL解析执行器进行解析
+         * 本质上都是使用SQL解析执行器进行解析
+         */
         return useCache ? parseTreeCache.getUnchecked(sql) : sqlParserExecutor.parse(sql);
     }
 }

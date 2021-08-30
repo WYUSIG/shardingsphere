@@ -45,7 +45,9 @@ public final class SQLVisitorEngine {
      * @return SQL visitor result
      */
     public <T> T visit(final ParseTree parseTree) {
+        //根据数据库类型、视图类型(STATEMENT)、sql类型、初始化参数 获得对应的SQLTypeVisitor，如MySQLDDLStatementSQLVisitor
         ParseTreeVisitor<T> visitor = SQLVisitorFactory.newInstance(databaseType, visitorType, SQLVisitorRule.valueOf(parseTree.getClass()), props);
+        //调用该类型的语法树的回调方法，该方法里面会调用ParseTreeVisitor的指定方法，如创建表、删除表等，最后得到指定Statement
         return parseTree.accept(visitor);
     }
 }

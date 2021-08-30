@@ -28,12 +28,15 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
  * ShardingSphere SQL parser engine.
  */
 public final class ShardingSphereSQLParserEngine {
-    
+
+    //普通sql解析引擎
     private final SQLStatementParserEngine sqlStatementParserEngine;
-    
+
+    //distSql解析引擎
     private final DistSQLStatementParserEngine distSQLStatementParserEngine;
     
     public ShardingSphereSQLParserEngine(final String databaseTypeName) {
+        //通过SQLStatementParserEngineFactory创建
         sqlStatementParserEngine = SQLStatementParserEngineFactory.getSQLStatementParserEngine(databaseTypeName);
         distSQLStatementParserEngine = new DistSQLStatementParserEngine();
     }
@@ -64,9 +67,11 @@ public final class ShardingSphereSQLParserEngine {
     
     private SQLStatement parse0(final String sql, final boolean useCache) {
         try {
+            //尝试使用普通的sql解析引擎解析
             return sqlStatementParserEngine.parse(sql, useCache);
         } catch (final SQLParsingException | ParseCancellationException originalEx) {
             try {
+                //上面解析失败，再使用distSQL解析引擎解析
                 return distSQLStatementParserEngine.parse(sql);
             } catch (final SQLParsingException ignored) {
                 throw originalEx;

@@ -26,14 +26,18 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
  * SQL statement parser engine.
  */
 public final class SQLStatementParserEngine {
-    
+
+    //SQL statement解析 执行器
     private final SQLStatementParserExecutor sqlStatementParserExecutor;
-    
+
+    //guava的加载缓存
     private final LoadingCache<String, SQLStatement> sqlStatementCache;
     
     public SQLStatementParserEngine(final String databaseType) {
+        //根据数据库类型初始化SQL statement解析 执行器
         sqlStatementParserExecutor = new SQLStatementParserExecutor(databaseType);
         // TODO use props to configure cache option
+        //初始化guava的加载缓存
         sqlStatementCache = SQLStatementCacheBuilder.build(new CacheOption(2000, 65535L, 4), databaseType);
     }
     
@@ -45,6 +49,10 @@ public final class SQLStatementParserEngine {
      * @return SQL statement
      */
     public SQLStatement parse(final String sql, final boolean useCache) {
+        /**
+         * 如果是使用缓存则从sqlStatementCache中直接取，取不到则调用SQLStatementCacheLoader进行加载(SQLStatementCacheLoader内部也是使用SQL statement解析 执行器)
+         * 如果不使用缓存，则使用SQL statement解析 执行器 解析出 对应的 SQLStatement
+         */
         return useCache ? sqlStatementCache.getUnchecked(sql) : sqlStatementParserExecutor.parse(sql);
     }
 }

@@ -27,13 +27,17 @@ import java.util.Properties;
  * SQL statement parser executor.
  */
 public final class SQLStatementParserExecutor {
-    
+
+    //解析引擎
     private final SQLParserEngine parserEngine;
-    
+
+    //视图引擎
     private final SQLVisitorEngine visitorEngine;
     
     public SQLStatementParserExecutor(final String databaseType) {
+        //根据数据库类型初始化解析引擎
         parserEngine = new SQLParserEngine(databaseType);
+        //根据数据引擎创建STATEMENT类信息的视图引擎
         visitorEngine = new SQLVisitorEngine(databaseType, "STATEMENT", new Properties());
     }
     
@@ -44,6 +48,7 @@ public final class SQLStatementParserExecutor {
      * @return SQL statement
      */
     public SQLStatement parse(final String sql) {
+        //解析引擎先解析sql得到语法树ParseTree，再使用视图引擎解析出SQLStatement
         return visitorEngine.visit(parserEngine.parse(sql, false));
     }
 }
