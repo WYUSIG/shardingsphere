@@ -59,7 +59,7 @@ public final class SQLParserFactory {
     
     @SneakyThrows(ReflectiveOperationException.class)
     private static SQLParser createSQLParser(final TokenStream tokenStream, final Class<? extends SQLParser> parserClass) {
-        //把词法解析结果进行语法解析
+        //把词法解析结果构建语法解析类
         return parserClass.getConstructor(TokenStream.class).newInstance(tokenStream);
     }
     
