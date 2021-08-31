@@ -87,10 +87,14 @@ public final class InsertClauseShardingConditionEngine implements ShardingCondit
     private ShardingCondition createShardingCondition(final String tableName, final Iterator<String> columnNames, final InsertValueContext insertValueContext, final List<Object> parameters) {
         ShardingCondition result = new ShardingCondition();
         DatetimeService datetimeService = RequiredSPIRegistry.getRegisteredService(DatetimeService.class);
+        //配置的表达式
         for (ExpressionSegment each : insertValueContext.getValueExpressions()) {
+            //对应插入的字段名
             String columnName = columnNames.next();
+            //如果该字段被配置用来分片
             if (shardingRule.isShardingColumn(columnName, tableName)) {
                 if (each instanceof SimpleExpressionSegment) {
+                    //该值为普通值，则
                     result.getValues().add(new ListShardingConditionValue<>(columnName, tableName, Collections.singletonList(getShardingValue((SimpleExpressionSegment) each, parameters))));
                 } else if (ExpressionConditionUtils.isNowExpression(each)) {
                     result.getValues().add(new ListShardingConditionValue<>(columnName, tableName, Collections.singletonList(datetimeService.getDatetime())));

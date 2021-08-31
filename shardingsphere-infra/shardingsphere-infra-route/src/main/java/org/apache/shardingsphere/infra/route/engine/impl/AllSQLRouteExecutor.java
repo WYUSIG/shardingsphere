@@ -34,6 +34,7 @@ public final class AllSQLRouteExecutor implements SQLRouteExecutor {
     @Override
     public RouteContext route(final LogicSQL logicSQL, final ShardingSphereMetaData metaData) {
         RouteContext result = new RouteContext();
+        //从元数据上下文中取出所有数据源，遍历，添加到路由上下文的routeUnits
         for (String each : metaData.getResource().getDataSources().keySet()) {
             result.getRouteUnits().add(new RouteUnit(new RouteMapper(each, each), Collections.emptyList()));
         }

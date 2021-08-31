@@ -40,6 +40,7 @@ import java.util.Map.Entry;
 public final class PartialSQLRouteExecutor implements SQLRouteExecutor {
     
     static {
+        //SPI SQLRouter类加载
         ShardingSphereServiceLoader.register(SQLRouter.class);
     }
     
@@ -50,6 +51,12 @@ public final class PartialSQLRouteExecutor implements SQLRouteExecutor {
     
     public PartialSQLRouteExecutor(final Collection<ShardingSphereRule> rules, final ConfigurationProperties props) {
         this.props = props;
+        /**
+         * 根据配置的rules规则，从SPI SQLRouter实现中，找到对应的SQLRouter，如：
+         * rules:
+         * - !SHARDING
+         * 就会匹配 ShardingSQLRouter
+         */
         routers = OrderedSPIRegistry.getRegisteredServices(rules, SQLRouter.class);
     }
     
@@ -59,12 +66,15 @@ public final class PartialSQLRouteExecutor implements SQLRouteExecutor {
         RouteContext result = new RouteContext();
         for (Entry<ShardingSphereRule, SQLRouter> entry : routers.entrySet()) {
             if (result.getRouteUnits().isEmpty()) {
+                //如果路由单元为空，直接调用对应的SQLRouter的createRouteContext，直接赋值
                 result = entry.getValue().createRouteContext(logicSQL, metaData, entry.getKey(), props);
             } else {
+                //调用对应的SQLRouter的decorateRouteContext,进行添加(ShardingSQLRouter目前暂无实现)
                 entry.getValue().decorateRouteContext(result, logicSQL, metaData, entry.getKey(), props);
             }
         }
         if (result.getRouteUnits().isEmpty() && 1 == metaData.getResource().getDataSources().size()) {
+            //如果没有命中路由，配置的数据源又只有一个，直接把这个数据源添加到路由上下文
             String singleDataSourceName = metaData.getResource().getDataSources().keySet().iterator().next();
             result.getRouteUnits().add(new RouteUnit(new RouteMapper(singleDataSourceName, singleDataSourceName), Collections.emptyList()));
         }

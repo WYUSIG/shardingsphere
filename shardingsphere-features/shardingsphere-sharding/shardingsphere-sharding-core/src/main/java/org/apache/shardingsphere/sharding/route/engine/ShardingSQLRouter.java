@@ -51,14 +51,21 @@ public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
     public RouteContext createRouteContext(final LogicSQL logicSQL, final ShardingSphereMetaData metaData, final ShardingRule rule, final ConfigurationProperties props) {
         RouteContext result = new RouteContext();
         SQLStatement sqlStatement = logicSQL.getSqlStatementContext().getSqlStatement();
+        //判断sql是DDL还是DML，进而判断sql是创建表、创建索引、创建视图、删除索引、插入、查询、删除等，创建特定的ShardingStatementValidator
         Optional<ShardingStatementValidator> validator = ShardingStatementValidatorFactory.newInstance(sqlStatement);
+        //分片路由操作前的校验
         validator.ifPresent(optional -> optional.preValidate(rule, logicSQL.getSqlStatementContext(), logicSQL.getParameters(), metaData.getSchema()));
+        //根据sql和配置创建分片条件ShardingConditions
         ShardingConditions shardingConditions = createShardingConditions(logicSQL, metaData, rule);
+        //sql最后是否需要合并结果集
         boolean needMergeShardingValues = isNeedMergeShardingValues(logicSQL.getSqlStatementContext(), rule);
         if (sqlStatement instanceof DMLStatement && needMergeShardingValues) {
+            //如果最后需要合并结果集，直接取最后一个分片条件
             mergeShardingConditions(shardingConditions);
         }
+        //创建ShardingRouteEngine，再调用ShardingRouteEngine#route，对路由上下文进行添加路由单元
         ShardingRouteEngineFactory.newInstance(rule, metaData, logicSQL.getSqlStatementContext(), shardingConditions, props).route(result, rule);
+        //分片路由操作后的校验
         validator.ifPresent(v -> v.postValidate(rule, logicSQL.getSqlStatementContext(), result, metaData.getSchema()));
         return result;
     }
@@ -66,8 +73,13 @@ public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private ShardingConditions createShardingConditions(final LogicSQL logicSQL, final ShardingSphereMetaData metaData, final ShardingRule rule) {
         List<ShardingCondition> shardingConditions;
+        //如果是DML
         if (logicSQL.getSqlStatementContext().getSqlStatement() instanceof DMLStatement) {
+            //创建ShardingConditionEngine，如果insert语句，则是InsertClauseShardingConditionEngine，否则是WhereClauseShardingConditionEngine
             ShardingConditionEngine shardingConditionEngine = ShardingConditionEngineFactory.createShardingConditionEngine(logicSQL, metaData, rule);
+            /**
+             * 调用对于的createShardingConditions方法，构造出条件ShardingConditions
+             */
             shardingConditions = shardingConditionEngine.createShardingConditions(logicSQL.getSqlStatementContext(), logicSQL.getParameters());
         } else {
             shardingConditions = Collections.emptyList();
