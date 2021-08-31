@@ -1,5 +1,7 @@
 ## ShardingSphere-5.0.0-beta源码学习
 
+
+
 ShardingSphere路由就是创建RouteContext的过程
 
 如果你还记得之前分析的ShardingSpherePreparedStatement，在执行sql语句，创建执行上下文ExecutionContext时，就需要先创建路由上下文RouteContext
@@ -23,7 +25,9 @@ public final class KernelProcessor {
 
 下面我们就来探讨一下RouteContext创建过程
 
-### SQLRouteEngine
+
+
+### 1、SQLRouteEngine
 
 在上面我们可以看到，创建RouteContext调用了KernelProcessor#route方法
 
@@ -74,7 +78,9 @@ SQLRouteEngine#route方法判断了是否需要遍历整个逻辑库，比如sho
 
 否则使用配置的rules和props创建PartialSQLRouteExecutor
 
-### 整个逻辑库路由AllSQLRouteExecutor
+
+
+### 2、整个逻辑库路由AllSQLRouteExecutor
 
 ```java
 public final class AllSQLRouteExecutor implements SQLRouteExecutor {
@@ -93,7 +99,9 @@ public final class AllSQLRouteExecutor implements SQLRouteExecutor {
 
 可以看到AllSQLRouteExecutor非常简单，就是把所有数据源的逻辑名、真正名放到RouteContext#routeUnits
 
-### 部分库路由PartialSQLRouteExecutor
+
+
+### 3、部分逻辑库路由PartialSQLRouteExecutor
 
 ```java
 public final class PartialSQLRouteExecutor implements SQLRouteExecutor {
@@ -147,7 +155,8 @@ public final class PartialSQLRouteExecutor implements SQLRouteExecutor {
 也是在这一步，路由根据配置的rule类型选择不同的SQLRouter分别处理不同的路由逻辑
 
 
-### 分片路由器ShardingSQLRouter
+
+#### 3.1、分片路由器ShardingSQLRouter
 
 ```java
 public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
@@ -205,6 +214,105 @@ public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
 
 其中重点就是(2)(3)(4)步骤，感兴趣的同学可以继续深追，里面就有判断insert或where条件是否属于配置的分片字段等逻辑，较为复杂
 
-### 读写分离路由器ReadwriteSplittingSQLRouter
 
+
+#### 3.2、读写分离路由器ReadwriteSplittingSQLRouter
+
+```java
+public final class ReadwriteSplittingSQLRouter implements SQLRouter<ReadwriteSplittingRule> {
+
+    @Override
+    public RouteContext createRouteContext(final LogicSQL logicSQL, final ShardingSphereMetaData metaData, final ReadwriteSplittingRule rule, final ConfigurationProperties props) {
+        RouteContext result = new RouteContext();
+        //构造出ReadwriteSplittingDataSourceRouter，调用route方法返回命中库的名字
+        String dataSourceName = new ReadwriteSplittingDataSourceRouter(rule.getSingleDataSourceRule()).route(logicSQL.getSqlStatementContext().getSqlStatement());
+        result.getRouteUnits().add(new RouteUnit(new RouteMapper(DefaultSchema.LOGIC_NAME, dataSourceName), Collections.emptyList()));
+        return result;
+    }
+    ...
+}
+```
+
+可以看到，其内部逻辑就是构造出ReadwriteSplittingDataSourceRouter，调用route方法返回命中库的名字，
+
+我们再看看ReadwriteSplittingDataSourceRouter是如何判断主库还是从库的，以及回调机制
+
+
+
+##### 3.2.1、ReadwriteSplittingDataSourceRouter
+
+```java
+@RequiredArgsConstructor
+public final class ReadwriteSplittingDataSourceRouter {
+    
+    private final ReadwriteSplittingDataSourceRule rule;
+    
+    /**
+     * Route.
+     * 
+     * @param sqlStatement SQL statement
+     * @return data source name
+     */
+    public String route(final SQLStatement sqlStatement) {
+        if (isPrimaryRoute(sqlStatement)) {
+            //判断使用主库
+            //PrimaryVisitedManager标记当前线程使用主库
+            PrimaryVisitedManager.setPrimaryVisited();
+            //首先尝试获取配置的autoAwareDataSourceName（autoAwareDataSource可以认为是一个回调，在回调实现里面可以根据PrimaryVisitedManager标志自由返回这次命中什么库）
+            String autoAwareDataSourceName = rule.getAutoAwareDataSourceName();
+            if (Strings.isNullOrEmpty(autoAwareDataSourceName)) {
+                //autoAwareDataSource获取不到就直接返会配置的writeDataSource
+                return rule.getWriteDataSourceName();
+            }
+            //如果autoAwareDataSource有值，则加载spi DataSourceNameAware
+            Optional<DataSourceNameAware> dataSourceNameAware = DataSourceNameAwareFactory.getInstance().getDataSourceNameAware();
+            if (dataSourceNameAware.isPresent()) {
+                //回调DataSourceNameAware, 返回自定义的主库
+                return dataSourceNameAware.get().getPrimaryDataSourceName(autoAwareDataSourceName);
+            }
+        }
+        //如果不需要访问主库
+        //首先尝试获取配置的autoAwareDataSourceName
+        String autoAwareDataSourceName = rule.getAutoAwareDataSourceName();
+        if (Strings.isNullOrEmpty(autoAwareDataSourceName)) {
+            //autoAwareDataSourceName获取不到, 直接负载均衡一个从库
+            return rule.getLoadBalancer().getDataSource(rule.getName(), rule.getWriteDataSourceName(), rule.getReadDataSourceNames());
+        }
+        //如果autoAwareDataSource有值，则加载spi DataSourceNameAware
+        Optional<DataSourceNameAware> dataSourceNameAware = DataSourceNameAwareFactory.getInstance().getDataSourceNameAware();
+        if (dataSourceNameAware.isPresent()) {
+            //回调DataSourceNameAware, 返回自定义的所有从库
+            Collection<String> replicaDataSourceNames = dataSourceNameAware.get().getReplicaDataSourceNames(autoAwareDataSourceName);
+            return rule.getLoadBalancer().getDataSource(rule.getName(), rule.getWriteDataSourceName(), new ArrayList<>(replicaDataSourceNames));
+        }
+        return rule.getLoadBalancer().getDataSource(rule.getName(), rule.getWriteDataSourceName(), rule.getReadDataSourceNames());
+    }
+
+    /**
+     * 判断是否主库(写库)路由
+     * @param sqlStatement 解析出来的sql
+     * @return true:主库，false：从库
+     */
+    private boolean isPrimaryRoute(final SQLStatement sqlStatement) {
+        //如果sql有锁操作 或者 非select语句 或者 PrimaryVisitedManager已经标记访问主库 或者 HintManager已经标记只写 或者 是个事务
+        return containsLockSegment(sqlStatement) || !(sqlStatement instanceof SelectStatement)
+                || PrimaryVisitedManager.getPrimaryVisited() || HintManager.isWriteRouteOnly() || TransactionHolder.isTransaction();
+    }
+}
+```
+
+可以看到，它根据解析出来的sql判断是否需要访问主库：
+
+如果sql有锁操作 或者 非select语句 或者 PrimaryVisitedManager已经标记访问主库 或者 HintManager已经标记只写 或者 是个事务
+
+则代表需要访问主库
+
+以及我们可以看到DataSourceNameAware这个SPI，在需要访问主库或从库时，会分表回调用DataSourceNameAware#getPrimaryDataSourceName、DataSourceNameAware#getReplicaDataSourceNames方法，针对一些有特殊需要的开发者
+
+从库的负载均衡算法ReplicaLoadBalanceAlgorithm我就不展开了，ShardingSphere内置了两个算法：
+RandomReplicaLoadBalanceAlgorithm(随机)、RoundRobinReplicaLoadBalanceAlgorithm(轮询)
+
+
+
+**总的来说，路由过程就是创建RouteContext，添加RouteUnit的过程，而RouteUnit里面记录了接下来sql执行时需要访问的数据库(含逻辑名和真实名)**
 
