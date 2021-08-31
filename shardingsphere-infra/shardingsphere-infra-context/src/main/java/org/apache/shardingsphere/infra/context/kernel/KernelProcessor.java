@@ -55,6 +55,7 @@ public final class KernelProcessor {
     }
     
     private RouteContext route(final LogicSQL logicSQL, final ShardingSphereMetaData metaData, final ConfigurationProperties props) {
+        //根据配置规则和props创建路由引擎，再调用路由引擎的route方法，传入解析+填入参数完成的sql和元数据，得到路由上下文
         return new SQLRouteEngine(metaData.getRuleMetaData().getRules(), props).route(logicSQL, metaData);
     }
     

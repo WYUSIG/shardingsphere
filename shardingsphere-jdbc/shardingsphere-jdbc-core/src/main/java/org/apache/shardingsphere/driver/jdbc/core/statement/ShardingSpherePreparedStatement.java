@@ -382,9 +382,9 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private ExecutionContext createExecutionContext() {
-        //进一步解析sql
+        //sql带上参数
         LogicSQL logicSQL = createLogicSQL();
-        //检查sql
+        //检查sql是否有权限
         SQLCheckEngine.check(logicSQL.getSqlStatementContext().getSqlStatement(), logicSQL.getParameters(), 
                 metaDataContexts.getDefaultMetaData().getRuleMetaData().getRules(), DefaultSchema.LOGIC_NAME, metaDataContexts.getMetaDataMap(), null);
         //通过内核处理器创建执行上下文

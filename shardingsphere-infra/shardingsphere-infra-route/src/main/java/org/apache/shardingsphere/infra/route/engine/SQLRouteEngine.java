@@ -48,12 +48,15 @@ public final class SQLRouteEngine {
      * @return route context
      */
     public RouteContext route(final LogicSQL logicSQL, final ShardingSphereMetaData metaData) {
+        //判断sql是否需要全库执行，创建全库的路由执行器或部分的路由执行器
         SQLRouteExecutor executor = isNeedAllSchemas(logicSQL.getSqlStatementContext().getSqlStatement()) ? new AllSQLRouteExecutor() : new PartialSQLRouteExecutor(rules, props);
+        //调用路由执行器route方法
         return executor.route(logicSQL, metaData);
     }
     
     // TODO use dynamic config to judge UnconfiguredSchema
     private boolean isNeedAllSchemas(final SQLStatement sqlStatement) {
+        //如果sql是show tables则需要全库执行
         return sqlStatement instanceof MySQLShowTablesStatement;
     }
 }
