@@ -53,6 +53,10 @@ public final class SQLRewriteEntry {
     public SQLRewriteEntry(final ShardingSphereSchema schema, final ConfigurationProperties props, final Collection<ShardingSphereRule> rules) {
         this.schema = schema;
         this.props = props;
+        /**
+         * 根据rule配置的类型去spi查找SQLRewriteContextDecorator是实现类
+         * sharing的话就是
+         */
         decorators = OrderedSPIRegistry.getRegisteredServices(rules, SQLRewriteContextDecorator.class);
     }
     
@@ -66,14 +70,18 @@ public final class SQLRewriteEntry {
      * @return route unit and SQL rewrite result map
      */
     public SQLRewriteResult rewrite(final String sql, final List<Object> parameters, final SQLStatementContext<?> sqlStatementContext, final RouteContext routeContext) {
+        //创建SQLRewriteContext
         SQLRewriteContext sqlRewriteContext = createSQLRewriteContext(sql, parameters, sqlStatementContext, routeContext);
+        //如果路由只命中一个库，直接使用GenericSQLRewriteEngine来生成重写的sql，否则使用RouteSQLRewriteEngine，给每个命中的路由单元生成重写的sql
         return routeContext.getRouteUnits().isEmpty()
                 ? new GenericSQLRewriteEngine().rewrite(sqlRewriteContext) : new RouteSQLRewriteEngine().rewrite(sqlRewriteContext, routeContext);
     }
     
     private SQLRewriteContext createSQLRewriteContext(final String sql, final List<Object> parameters, final SQLStatementContext<?> sqlStatementContext, final RouteContext routeContext) {
         SQLRewriteContext result = new SQLRewriteContext(schema, sqlStatementContext, sql, parameters);
+        //装饰模式，sharding会在这里进行参数改写
         decorate(decorators, result, routeContext);
+        //遍历上面生成的SQLTokenGenerators，生成SQLToken,SQLToken记录了需要改写的位置
         result.generateSQLTokens();
         return result;
     }

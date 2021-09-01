@@ -41,10 +41,12 @@ public final class ShardingSQLRewriteContextDecorator implements SQLRewriteConte
             return;
         }
         for (ParameterRewriter each : new ShardingParameterRewriterBuilder(shardingRule, routeContext).getParameterRewriters(sqlRewriteContext.getSchema())) {
+            //如果参数数量>0, 有分页、自动生成主键等 则进行参数改写
             if (!sqlRewriteContext.getParameters().isEmpty() && each.isNeedRewrite(sqlRewriteContext.getSqlStatementContext())) {
                 each.rewrite(sqlRewriteContext.getParameterBuilder(), sqlRewriteContext.getSqlStatementContext(), sqlRewriteContext.getParameters());
             }
         }
+        //添加分片的改写规则生成器SQLTokenGenerators
         sqlRewriteContext.addSQLTokenGenerators(new ShardingTokenGenerateBuilder(shardingRule, routeContext).getSQLTokenGenerators());
     }
     

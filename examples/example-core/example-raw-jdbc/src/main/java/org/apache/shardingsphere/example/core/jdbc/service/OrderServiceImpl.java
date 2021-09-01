@@ -148,6 +148,7 @@ public final class OrderServiceImpl implements ExampleService {
         for (Object each : orderRepository.selectAll()) {
             System.out.println(each);
         }
+        System.out.println(((OrderRepositoryImpl)orderRepository).getAvg());;
         System.out.println("---------------------------- Print OrderItem Data -------------------");
         for (Object each : orderItemRepository.selectAll()) {
             System.out.println(each);
