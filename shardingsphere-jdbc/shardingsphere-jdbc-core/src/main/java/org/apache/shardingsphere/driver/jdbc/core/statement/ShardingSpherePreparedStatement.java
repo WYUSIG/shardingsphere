@@ -217,17 +217,20 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private List<QueryResult> executeQuery0() throws SQLException {
-        //如果元信息的rules里面有RawExecutionRule子类的
+        //如果元信息的rules里面有RawExecutionRule子类配置的，目前没有看到RawExecutionRule实现
         if (metaDataContexts.getDefaultMetaData().getRuleMetaData().getRules().stream().anyMatch(each -> each instanceof RawExecutionRule)) {
             return rawExecutor.execute(createRawExecutionGroupContext(), executionContext.getSqlStatementContext(),
                     new RawSQLExecutorCallback()).stream().map(each -> (QueryResult) each).collect(Collectors.toList());
         }
-        //从执行上下文拿到路由上下文，判断是否需要联合多个库
+        //从执行上下文拿到路由上下文，如果路由命中多个库，使用federateExecutor执行
         if (executionContext.getRouteContext().isFederated()) {
             return executeFederatedQuery();
         }
+        //按数据源将执行单元分组，并创建执行组上下文
         ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext = createExecutionGroupContext();
+        //对这次的PreparedStatement、sql参数进行缓存
         cacheStatements(executionGroupContext.getInputGroups());
+        //执行
         return driverJDBCExecutor.executeQuery(executionGroupContext, executionContext.getSqlStatementContext(), 
                 new PreparedStatementExecuteQueryCallback(metaDataContexts.getDefaultMetaData().getResource().getDatabaseType(), sqlStatement, SQLExecutorExceptionHandler.isExceptionThrown()));
     }
@@ -242,8 +245,10 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private DriverExecutionPrepareEngine<JDBCExecutionUnit, Connection> createDriverExecutionPrepareEngine() {
+        //获取配置的查询最大连接数max-connections-size-per-query
         int maxConnectionsSizePerQuery = metaDataContexts.getProps().<Integer>getValue(ConfigurationPropertyKey.MAX_CONNECTIONS_SIZE_PER_QUERY);
-        return new DriverExecutionPrepareEngine<>(JDBCDriverType.PREPARED_STATEMENT, maxConnectionsSizePerQuery, connection, 
+        //构建DriverExecutionPrepareEngine
+        return new DriverExecutionPrepareEngine<>(JDBCDriverType.PREPARED_STATEMENT, maxConnectionsSizePerQuery, connection,
                 statementOption, metaDataContexts.getDefaultMetaData().getRuleMetaData().getRules());
     }
     
@@ -319,7 +324,9 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private ExecutionGroupContext<JDBCExecutionUnit> createExecutionGroupContext() throws SQLException {
+        //创建执行前置准备引擎DriverExecutionPrepareEngine(获取最大连接数)
         DriverExecutionPrepareEngine<JDBCExecutionUnit, Connection> prepareEngine = createDriverExecutionPrepareEngine();
+        //使用执行前置准备引擎执行前置准备工作，创建执行组上下文，分组依据是实际sql操作是否是同一个数据源
         return prepareEngine.prepare(executionContext.getRouteContext(), executionContext.getExecutionUnits());
     }
     

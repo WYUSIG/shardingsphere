@@ -65,8 +65,11 @@ public final class DriverJDBCExecutor {
     public List<QueryResult> executeQuery(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext, 
                                           final SQLStatementContext<?> sqlStatementContext, final ExecuteQueryCallback callback) throws SQLException {
         try {
+            //初始化执行处理引擎
             ExecuteProcessEngine.initialize(sqlStatementContext, executionGroupContext, metaDataContexts.getProps());
+            //执行返回QueryResult，如果是内存归并，QueryResult的实现是JDBCMemoryQueryResult；如果是流式归并，则是JDBCStreamQueryResult
             List<QueryResult> result = jdbcExecutor.execute(executionGroupContext, callback);
+            //执行处理引擎发布执行完成事件
             ExecuteProcessEngine.finish(executionGroupContext.getExecutionID());
             return result;
         } finally {

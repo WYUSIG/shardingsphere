@@ -75,17 +75,22 @@ public final class ExecutorEngine implements AutoCloseable {
      */
     public <I, O> List<O> execute(final ExecutionGroupContext<I> executionGroupContext,
                                   final ExecutorCallback<I, O> firstCallback, final ExecutorCallback<I, O> callback, final boolean serial) throws SQLException {
+        //如果执行组为空，代码没有执行单元，直接返回空列表
         if (executionGroupContext.getInputGroups().isEmpty()) {
             return Collections.emptyList();
         }
+        //判断是否串行化，串行化的话调用serialExecute，并行调用parallelExecute
         return serial ? serialExecute(executionGroupContext.getInputGroups().iterator(), firstCallback, callback)
                 : parallelExecute(executionGroupContext.getInputGroups().iterator(), firstCallback, callback);
     }
     
     private <I, O> List<O> serialExecute(final Iterator<ExecutionGroup<I>> executionGroups, final ExecutorCallback<I, O> firstCallback, final ExecutorCallback<I, O> callback) throws SQLException {
+        //遍历每个执行组，一个组代表一个数据源
         ExecutionGroup<I> firstInputs = executionGroups.next();
+        //同步执行，第一个结果放到result
         List<O> result = new LinkedList<>(syncExecute(firstInputs, null == firstCallback ? callback : firstCallback));
         while (executionGroups.hasNext()) {
+            //遍历每个执行组，继续执行
             result.addAll(syncExecute(executionGroups.next(), callback));
         }
         return result;
@@ -98,6 +103,7 @@ public final class ExecutorEngine implements AutoCloseable {
     }
     
     private <I, O> Collection<O> syncExecute(final ExecutionGroup<I> executionGroup, final ExecutorCallback<I, O> callback) throws SQLException {
+        //使用ExecutorCallback真正去调用
         return callback.execute(executionGroup.getInputs(), true, ExecutorDataMap.getValue());
     }
     

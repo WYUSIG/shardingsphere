@@ -41,7 +41,9 @@ public abstract class ExecuteQueryCallback extends JDBCExecutorCallback<QueryRes
     
     @Override
     protected final QueryResult executeSQL(final String sql, final Statement statement, final ConnectionMode connectionMode) throws SQLException {
+        //使用数据源的statement真正执行sql
         ResultSet resultSet = executeQuery(sql, statement);
+        //判断连接模式来确定使用流式归并还是内存归并
         return ConnectionMode.MEMORY_STRICTLY == connectionMode ? new JDBCStreamQueryResult(resultSet) : new JDBCMemoryQueryResult(resultSet);
     }
     

@@ -60,17 +60,24 @@ public abstract class AbstractExecutionPrepareEngine<T> implements ExecutionPrep
     @Override
     public final ExecutionGroupContext<T> prepare(final RouteContext routeContext, final Collection<ExecutionUnit> executionUnits) throws SQLException {
         Collection<ExecutionGroup<T>> result = new LinkedList<>();
+        //aggregateSQLUnitGroups方法是把执行单元按是否是同一数据源分组，然后遍历每个组
         for (Entry<String, List<SQLUnit>> entry : aggregateSQLUnitGroups(executionUnits).entrySet()) {
+            //数据源名称
             String dataSourceName = entry.getKey();
+            //sql执行单元
             List<SQLUnit> sqlUnits = entry.getValue();
+            //按照最大连接数分成一份一份的
             List<List<SQLUnit>> sqlUnitGroups = group(sqlUnits);
+            ////自动选择内存限制模式还是连接限制模式![连接模式计算公式](https://shardingsphere.apache.org/document/current/img/sharding/connection_mode_cn.png)
             ConnectionMode connectionMode = maxConnectionsSizePerQuery < sqlUnits.size() ? ConnectionMode.CONNECTION_STRICTLY : ConnectionMode.MEMORY_STRICTLY;
+
             result.addAll(group(dataSourceName, sqlUnitGroups, connectionMode));
         }
         return decorate(routeContext, result);
     }
     
     private List<List<SQLUnit>> group(final List<SQLUnit> sqlUnits) {
+        //按照最大连接数分成一份一份的
         int desiredPartitionSize = Math.max(0 == sqlUnits.size() % maxConnectionsSizePerQuery ? sqlUnits.size() / maxConnectionsSizePerQuery : sqlUnits.size() / maxConnectionsSizePerQuery + 1, 1);
         return Lists.partition(sqlUnits, desiredPartitionSize);
     }

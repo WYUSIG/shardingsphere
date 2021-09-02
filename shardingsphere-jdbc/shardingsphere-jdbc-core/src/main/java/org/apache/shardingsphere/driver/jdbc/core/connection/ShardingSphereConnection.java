@@ -91,21 +91,26 @@ public final class ShardingSphereConnection extends AbstractConnectionAdapter im
         DataSource dataSource = dataSourceMap.get(dataSourceName);
         Preconditions.checkState(null != dataSource, "Missing the data source name: '%s'", dataSourceName);
         Collection<Connection> connections;
+        //尝试从缓存中取数据库连接
         synchronized (getCachedConnections()) {
             connections = getCachedConnections().get(dataSourceName);
         }
         List<Connection> result;
         if (connections.size() >= connectionSize) {
+            //缓存能满足直接分配
             result = new ArrayList<>(connections).subList(0, connectionSize);
         } else if (!connections.isEmpty()) {
+            //缓存有，但不满足sql执行数量
             result = new ArrayList<>(connectionSize);
             result.addAll(connections);
+            //半缓存半创建
             List<Connection> newConnections = createConnections(dataSourceName, dataSource, connectionSize - connections.size(), connectionMode);
             result.addAll(newConnections);
             synchronized (getCachedConnections()) {
                 getCachedConnections().putAll(dataSourceName, newConnections);
             }
         } else {
+            //缓存拿不到，直接创建
             result = new ArrayList<>(createConnections(dataSourceName, dataSource, connectionSize, connectionMode));
             synchronized (getCachedConnections()) {
                 getCachedConnections().putAll(dataSourceName, result);
@@ -122,8 +127,10 @@ public final class ShardingSphereConnection extends AbstractConnectionAdapter im
             return Collections.singletonList(connection);
         }
         if (ConnectionMode.CONNECTION_STRICTLY == connectionMode) {
+            //连接数限制连接的创建方式
             return createConnections(dataSourceName, dataSource, connectionSize);
         }
+        //内存限制的创建方式
         synchronized (dataSource) {
             return createConnections(dataSourceName, dataSource, connectionSize);
         }

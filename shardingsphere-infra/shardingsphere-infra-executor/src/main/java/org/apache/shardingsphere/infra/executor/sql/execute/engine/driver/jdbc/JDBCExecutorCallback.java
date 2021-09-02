@@ -60,7 +60,9 @@ public abstract class JDBCExecutorCallback<T> implements ExecutorCallback<JDBCEx
     public final Collection<T> execute(final Collection<JDBCExecutionUnit> executionUnits, final boolean isTrunkThread, final Map<String, Object> dataMap) throws SQLException {
         // TODO It is better to judge whether need sane result before execute, can avoid exception thrown
         Collection<T> result = new LinkedList<>();
+        //遍历执行组内的执行单元
         for (JDBCExecutionUnit each : executionUnits) {
+            //执行单元执行
             T executeResult = execute(each, isTrunkThread, dataMap);
             if (null != executeResult) {
                 result.add(executeResult);
@@ -80,8 +82,10 @@ public abstract class JDBCExecutorCallback<T> implements ExecutorCallback<JDBCEx
         DataSourceMetaData dataSourceMetaData = getDataSourceMetaData(jdbcExecutionUnit.getStorageResource().getConnection().getMetaData());
         SQLExecutionHook sqlExecutionHook = new SPISQLExecutionHook();
         try {
+            //获取sql单元
             SQLUnit sqlUnit = jdbcExecutionUnit.getExecutionUnit().getSqlUnit();
             sqlExecutionHook.start(jdbcExecutionUnit.getExecutionUnit().getDataSourceName(), sqlUnit.getSql(), sqlUnit.getParameters(), dataSourceMetaData, isTrunkThread, dataMap);
+            //sql、数据源的Statement、连接模式，已经完事具备
             T result = executeSQL(sqlUnit.getSql(), jdbcExecutionUnit.getStorageResource(), jdbcExecutionUnit.getConnectionMode());
             sqlExecutionHook.finishSuccess();
             finishReport(dataMap, jdbcExecutionUnit);

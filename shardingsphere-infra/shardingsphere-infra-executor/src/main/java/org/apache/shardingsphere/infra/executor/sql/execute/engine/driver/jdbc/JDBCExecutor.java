@@ -62,6 +62,7 @@ public final class JDBCExecutor {
     public <T> List<T> execute(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext,
                                final JDBCExecutorCallback<T> firstCallback, final JDBCExecutorCallback<T> callback) throws SQLException {
         try {
+            //调用执行引擎execute方法
             return executorEngine.execute(executionGroupContext, firstCallback, callback, serial);
         } catch (final SQLException ex) {
             SQLExecutorExceptionHandler.handleException(ex);

@@ -68,6 +68,7 @@ public final class DriverExecutionPrepareEngine<T extends DriverExecutionUnit<?>
     @Override
     protected List<ExecutionGroup<T>> group(final String dataSourceName, final List<List<SQLUnit>> sqlUnitGroups, final ConnectionMode connectionMode) throws SQLException {
         List<ExecutionGroup<T>> result = new LinkedList<>();
+        //根据数据库名字、执行组的sql执行数量，连接模式来创建数据库连接
         List<C> connections = executorDriverManager.getConnections(dataSourceName, sqlUnitGroups.size(), connectionMode);
         int count = 0;
         for (List<SQLUnit> each : sqlUnitGroups) {
