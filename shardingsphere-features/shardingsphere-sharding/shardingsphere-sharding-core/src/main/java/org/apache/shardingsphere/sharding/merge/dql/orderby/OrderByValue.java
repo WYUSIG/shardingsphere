@@ -117,6 +117,7 @@ public final class OrderByValue implements Comparable<OrderByValue> {
     public int compareTo(final OrderByValue o) {
         int i = 0;
         for (OrderByItem each : orderByItems) {
+            //针对order by的每一项进行比较，ASC还是DESC在CompareUtil.compareTo有区分
             int result = CompareUtil.compareTo(orderValues.get(i), o.orderValues.get(i), each.getSegment().getOrderDirection(),
                 each.getSegment().getNullOrderDirection(), orderValuesCaseSensitive.get(i));
             if (0 != result) {

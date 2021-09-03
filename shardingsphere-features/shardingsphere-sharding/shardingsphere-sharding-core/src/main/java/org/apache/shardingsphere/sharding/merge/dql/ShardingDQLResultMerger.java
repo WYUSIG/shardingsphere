@@ -57,12 +57,17 @@ public final class ShardingDQLResultMerger implements ResultMerger {
     @Override
     public MergedResult merge(final List<QueryResult> queryResults, final SQLStatementContext<?> sqlStatementContext, final ShardingSphereSchema schema) throws SQLException {
         if (1 == queryResults.size()) {
+            //如果执行结果集里面只有一个结果，直接包装成流式归并结果返回
             return new IteratorStreamMergedResult(queryResults);
         }
+        //构建结果集的列名和下标map
         Map<String, Integer> columnLabelIndexMap = getColumnLabelIndexMap(queryResults.get(0));
         SelectStatementContext selectStatementContext = (SelectStatementContext) sqlStatementContext;
+        //保存列名-下标map到SelectStatementContext
         selectStatementContext.setIndexes(columnLabelIndexMap);
+        //构建归并结果
         MergedResult mergedResult = build(queryResults, selectStatementContext, columnLabelIndexMap, schema);
+        //分页归并装饰器
         return decorate(queryResults, selectStatementContext, mergedResult);
     }
     
@@ -76,16 +81,20 @@ public final class ShardingDQLResultMerger implements ResultMerger {
     
     private MergedResult build(final List<QueryResult> queryResults, final SelectStatementContext selectStatementContext,
                                final Map<String, Integer> columnLabelIndexMap, final ShardingSphereSchema schema) throws SQLException {
+        //select语句有group by分组 或 聚合函数sum、avg这些都
         if (isNeedProcessGroupBy(selectStatementContext)) {
             return getGroupByMergedResult(queryResults, selectStatementContext, columnLabelIndexMap, schema);
         }
+        //select语句有去重distinct
         if (isNeedProcessDistinctRow(selectStatementContext)) {
             setGroupByForDistinctRow(selectStatementContext);
             return getGroupByMergedResult(queryResults, selectStatementContext, columnLabelIndexMap, schema);
         }
+        //select语句有order by排序
         if (isNeedProcessOrderBy(selectStatementContext)) {
             return new OrderByStreamMergedResult(queryResults, selectStatementContext, schema);
         }
+        //普通流式归并
         return new IteratorStreamMergedResult(queryResults);
     }
     
@@ -107,6 +116,7 @@ public final class ShardingDQLResultMerger implements ResultMerger {
     
     private MergedResult getGroupByMergedResult(final List<QueryResult> queryResults, final SelectStatementContext selectStatementContext,
                                                 final Map<String, Integer> columnLabelIndexMap, final ShardingSphereSchema schema) throws SQLException {
+        //如果group by的字段和order by的字段相同，则使用流式归并，否则使用内存归并
         return selectStatementContext.isSameGroupByAndOrderByItems()
                 ? new GroupByStreamMergedResult(columnLabelIndexMap, queryResults, selectStatementContext, schema)
                 : new GroupByMemoryMergedResult(queryResults, selectStatementContext, schema);

@@ -49,8 +49,10 @@ public final class GroupByStreamMergedResult extends OrderByStreamMergedResult {
     
     public GroupByStreamMergedResult(final Map<String, Integer> labelAndIndexMap, final List<QueryResult> queryResults,
                                      final SelectStatementContext selectStatementContext, final ShardingSphereSchema schema) throws SQLException {
+        //这里会进行优先队列数据初始化，优先队列定义在OrderByStreamMergedResult
         super(queryResults, selectStatementContext, schema);
         this.selectStatementContext = selectStatementContext;
+        //currentRow可以存一行数据
         currentRow = new ArrayList<>(labelAndIndexMap.size());
         currentGroupByValues = getOrderByValuesQueue().isEmpty()
                 ? Collections.emptyList() : new GroupByValue(getCurrentQueryResult(), selectStatementContext.getGroupByContext().getItems()).getGroupValues();
@@ -59,6 +61,7 @@ public final class GroupByStreamMergedResult extends OrderByStreamMergedResult {
     @Override
     public boolean next() throws SQLException {
         currentRow.clear();
+        //优先队列为空，证明没有下一位元素
         if (getOrderByValuesQueue().isEmpty()) {
             return false;
         }
@@ -74,30 +77,38 @@ public final class GroupByStreamMergedResult extends OrderByStreamMergedResult {
     private boolean aggregateCurrentGroupByRowAndNext() throws SQLException {
         boolean result = false;
         boolean cachedRow = false;
+        //聚集函数->AggregationUnit (MAX、MIN、SUM、COUNT、AVG)
         Map<AggregationProjection, AggregationUnit> aggregationUnitMap = Maps.toMap(
                 selectStatementContext.getProjectionsContext().getAggregationProjections(), input -> AggregationUnitFactory.create(input.getType(), input instanceof AggregationDistinctProjection));
+        //getCurrentQueryResult() 优先队列会出队，然后判断是否是同一组
         while (currentGroupByValues.equals(new GroupByValue(getCurrentQueryResult(), selectStatementContext.getGroupByContext().getItems()).getGroupValues())) {
+            //归并聚集函数的值
             aggregate(aggregationUnitMap);
             if (!cachedRow) {
+                //存储结果到currentRow
                 cacheCurrentRow();
                 cachedRow = true;
             }
+            //下一个结果，优先队列会出队
             result = super.next();
             if (!result) {
                 break;
             }
         }
+        //currentRow设置聚集函数值
         setAggregationValueToCurrentRow(aggregationUnitMap);
         return result;
     }
     
     private void aggregate(final Map<AggregationProjection, AggregationUnit> aggregationUnitMap) throws SQLException {
         for (Entry<AggregationProjection, AggregationUnit> entry : aggregationUnitMap.entrySet()) {
+            //count、sum...
             List<Comparable<?>> values = new ArrayList<>(2);
             if (entry.getKey().getDerivedAggregationProjections().isEmpty()) {
                 values.add(getAggregationValue(entry.getKey()));
             } else {
                 for (AggregationProjection each : entry.getKey().getDerivedAggregationProjections()) {
+                    //拿到聚集函数计算值
                     values.add(getAggregationValue(each));
                 }
             }
@@ -119,12 +130,14 @@ public final class GroupByStreamMergedResult extends OrderByStreamMergedResult {
     
     private void setAggregationValueToCurrentRow(final Map<AggregationProjection, AggregationUnit> aggregationUnitMap) {
         for (Entry<AggregationProjection, AggregationUnit> entry : aggregationUnitMap.entrySet()) {
+            //把聚集函数结果放到currentRow
             currentRow.set(entry.getKey().getIndex() - 1, entry.getValue().getResult());
         }
     }
     
     @Override
     public Object getValue(final int columnIndex, final Class<?> type) {
+        //直接取结果
         Object result = currentRow.get(columnIndex - 1);
         setWasNull(null == result);
         return result;

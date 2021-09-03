@@ -47,12 +47,14 @@ public class OrderByStreamMergedResult extends StreamMergedResult {
     public OrderByStreamMergedResult(final List<QueryResult> queryResults, final SelectStatementContext selectStatementContext, final ShardingSphereSchema schema) throws SQLException {
         orderByItems = selectStatementContext.getOrderByContext().getItems();
         orderByValuesQueue = new PriorityQueue<>(queryResults.size());
+        //把数据放到优先队列里面
         orderResultSetsToQueue(queryResults, selectStatementContext, schema);
         isFirstNext = true;
     }
     
     private void orderResultSetsToQueue(final List<QueryResult> queryResults, final SelectStatementContext selectStatementContext, final ShardingSphereSchema schema) throws SQLException {
         for (QueryResult each : queryResults) {
+            //把结果集构造成OrderByValue，进行结果排序
             OrderByValue orderByValue = new OrderByValue(each, orderByItems, selectStatementContext, schema);
             if (orderByValue.next()) {
                 orderByValuesQueue.offer(orderByValue);
@@ -70,13 +72,16 @@ public class OrderByStreamMergedResult extends StreamMergedResult {
             isFirstNext = false;
             return true;
         }
+        //出队
         OrderByValue firstOrderByValue = orderByValuesQueue.poll();
+        //如果结果集还没取完，下一位入队
         if (firstOrderByValue.next()) {
             orderByValuesQueue.offer(firstOrderByValue);
         }
         if (orderByValuesQueue.isEmpty()) {
             return false;
         }
+        //设置当前所读结果集为优先队列堆顶元素
         setCurrentQueryResult(orderByValuesQueue.peek().getQueryResult());
         return true;
     }

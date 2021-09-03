@@ -411,11 +411,18 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
         //返回LogicSQL，意为解析好的sql
         return new LogicSQL(sqlStatementContext, sql, parameters);
     }
-    
+
+    /**
+     * 合并查询结果
+     * @param queryResults 执行返回结果集
+     * @return 合并后的结果
+     */
     private MergedResult mergeQuery(final List<QueryResult> queryResults) throws SQLException {
         ShardingSphereMetaData metaData = metaDataContexts.getDefaultMetaData();
+        //创建归并引擎
         MergeEngine mergeEngine = new MergeEngine(
                 metaDataContexts.getDefaultMetaData().getResource().getDatabaseType(), metaData.getSchema(), metaDataContexts.getProps(), metaData.getRuleMetaData().getRules());
+        //调用归并引擎的merge方法
         return mergeEngine.merge(queryResults, executionContext.getSqlStatementContext());
     }
     

@@ -46,6 +46,7 @@ import java.util.Optional;
 public final class MergeEngine {
     
     static {
+        //SPI 加载ResultProcessEngine类
         ShardingSphereServiceLoader.register(ResultProcessEngine.class);
     }
     
@@ -62,6 +63,7 @@ public final class MergeEngine {
         this.databaseType = databaseType;
         this.schema = schema;
         this.props = props;
+        //所有SPI ResultProcessEngine实现类
         engines = OrderedSPIRegistry.getRegisteredServices(rules, ResultProcessEngine.class);
     }
     
@@ -74,16 +76,23 @@ public final class MergeEngine {
      * @throws SQLException SQL exception
      */
     public MergedResult merge(final List<QueryResult> queryResults, final SQLStatementContext<?> sqlStatementContext) throws SQLException {
+        //归并后的结果
         Optional<MergedResult> mergedResult = executeMerge(queryResults, sqlStatementContext);
+        //如果归并后的结果不为空，则调用decorate选择进一步装饰，否则直接取执行结果集的第一位进行进一步装饰
         Optional<MergedResult> result = mergedResult.isPresent() ? Optional.of(decorate(mergedResult.get(), sqlStatementContext)) : decorate(queryResults.get(0), sqlStatementContext);
+        //如果装饰后的结果为空，则直接取执行结果集的第一位
         return result.orElseGet(() -> new TransparentMergedResult(queryResults.get(0)));
     }
     
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Optional<MergedResult> executeMerge(final List<QueryResult> queryResults, final SQLStatementContext<?> sqlStatementContext) throws SQLException {
+        //遍历SPI注册的所有结果处理引擎ResultProcessEngine
         for (Entry<ShardingSphereRule, ResultProcessEngine> entry : engines.entrySet()) {
+            //如果是结果归并引擎则执行
             if (entry.getValue() instanceof ResultMergerEngine) {
+                //结果处理引擎创建ResultMerger实例，会根据sqlStatementContext类型创建不同的ResultMerger子类对象
                 ResultMerger resultMerger = ((ResultMergerEngine) entry.getValue()).newInstance(databaseType, entry.getKey(), props, sqlStatementContext);
+                //调用ResultMerger的merge方法
                 return Optional.of(resultMerger.merge(queryResults, sqlStatementContext, schema));
             }
         }
