@@ -39,10 +39,12 @@ public final class DistinctSumAggregationUnit implements AggregationUnit {
         if (null == values || null == values.get(0)) {
             return;
         }
+        //去重
         if (this.values.add(values.get(0))) {
             if (null == result) {
                 result = new BigDecimal("0");
             }
+            //直接相加
             result = result.add(new BigDecimal(values.get(0).toString()));
         }
     }

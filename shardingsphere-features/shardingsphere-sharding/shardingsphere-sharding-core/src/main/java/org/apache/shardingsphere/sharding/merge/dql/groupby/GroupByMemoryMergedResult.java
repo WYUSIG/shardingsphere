@@ -60,17 +60,25 @@ public final class GroupByMemoryMergedResult extends MemoryMergedResult<Sharding
     protected List<MemoryQueryResultRow> init(final ShardingRule shardingRule, final ShardingSphereSchema schema, 
                                               final SQLStatementContext sqlStatementContext, final List<QueryResult> queryResults, final MergedResult mergedResult) throws SQLException {
         SelectStatementContext selectStatementContext = (SelectStatementContext) sqlStatementContext;
+        //一组group by数据 -> 一行数据
         Map<GroupByValue, MemoryQueryResultRow> dataMap = new HashMap<>(1024);
+        //一组group by数据 -> 该组的聚合函数
         Map<GroupByValue, Map<AggregationProjection, AggregationUnit>> aggregationMap = new HashMap<>(1024);
         for (QueryResult each : queryResults) {
             while (each.next()) {
+                //每一行数据的group by字段的值
                 GroupByValue groupByValue = new GroupByValue(each, selectStatementContext.getGroupByContext().getItems());
+                //把数据存储到dataMap、aggregationMap
                 initForFirstGroupByValue(selectStatementContext, each, groupByValue, dataMap, aggregationMap);
+                //聚合函数数值归并
                 aggregate(selectStatementContext, each, groupByValue, aggregationMap);
             }
         }
+        //遍历每一组数据，把归并好的集合函数数值放到MemoryQueryResultRow
         setAggregationValueToMemoryRow(selectStatementContext, dataMap, aggregationMap);
+        //判断是否区分大小写
         List<Boolean> valueCaseSensitive = queryResults.isEmpty() ? Collections.emptyList() : getValueCaseSensitive(queryResults.iterator().next(), selectStatementContext, schema);
+        //返回排好序的归并好的每一组数据
         return getMemoryResultSetRows(selectStatementContext, dataMap, valueCaseSensitive);
     }
     
@@ -78,11 +86,14 @@ public final class GroupByMemoryMergedResult extends MemoryMergedResult<Sharding
                                           final GroupByValue groupByValue, final Map<GroupByValue, MemoryQueryResultRow> dataMap,
                                           final Map<GroupByValue, Map<AggregationProjection, AggregationUnit>> aggregationMap) throws SQLException {
         if (!dataMap.containsKey(groupByValue)) {
+            //如果group by的值作为key，还没有存到dataMap，则put进去
             dataMap.put(groupByValue, new MemoryQueryResultRow(queryResult));
         }
         if (!aggregationMap.containsKey(groupByValue)) {
+            //拿到所有聚和函数（min、max、avg、sum、count）
             Map<AggregationProjection, AggregationUnit> map = Maps.toMap(selectStatementContext.getProjectionsContext().getAggregationProjections(), 
                 input -> AggregationUnitFactory.create(input.getType(), input instanceof AggregationDistinctProjection));
+            //aggregationMap存进去
             aggregationMap.put(groupByValue, map);
         }
     }
@@ -90,14 +101,18 @@ public final class GroupByMemoryMergedResult extends MemoryMergedResult<Sharding
     private void aggregate(final SelectStatementContext selectStatementContext, final QueryResult queryResult,
                            final GroupByValue groupByValue, final Map<GroupByValue, Map<AggregationProjection, AggregationUnit>> aggregationMap) throws SQLException {
         for (AggregationProjection each : selectStatementContext.getProjectionsContext().getAggregationProjections()) {
+            //聚合函数sql改写新增的两个聚合函数
             List<Comparable<?>> values = new ArrayList<>(2);
             if (each.getDerivedAggregationProjections().isEmpty()) {
+                //如果没有改写sql，则value直接加上该聚合函数值
                 values.add(getAggregationValue(queryResult, each));
             } else {
                 for (AggregationProjection derived : each.getDerivedAggregationProjections()) {
+                    //否则加上改写新增的两个聚合函数值
                     values.add(getAggregationValue(queryResult, derived));
                 }
             }
+            //聚合函数数值归并
             aggregationMap.get(groupByValue).get(each).merge(values);
         }
     }
@@ -110,6 +125,7 @@ public final class GroupByMemoryMergedResult extends MemoryMergedResult<Sharding
     
     private void setAggregationValueToMemoryRow(final SelectStatementContext selectStatementContext, 
                                                 final Map<GroupByValue, MemoryQueryResultRow> dataMap, final Map<GroupByValue, Map<AggregationProjection, AggregationUnit>> aggregationMap) {
+        //遍历每一组数据，把归并好的集合函数数值放到MemoryQueryResultRow
         for (Entry<GroupByValue, MemoryQueryResultRow> entry : dataMap.entrySet()) {
             for (AggregationProjection each : selectStatementContext.getProjectionsContext().getAggregationProjections()) {
                 entry.getValue().setCell(each.getIndex(), aggregationMap.get(entry.getKey()).get(each).getResult());
@@ -145,7 +161,9 @@ public final class GroupByMemoryMergedResult extends MemoryMergedResult<Sharding
             Object[] data = generateReturnData(selectStatementContext);
             return Collections.singletonList(new MemoryQueryResultRow(data));
         }
+        //每一组数据
         List<MemoryQueryResultRow> result = new ArrayList<>(dataMap.values());
+        //排序，有order by按order by排序，没有按group by字段排序，valueCaseSensitive为是否区分大小写
         result.sort(new GroupByRowComparator(selectStatementContext, valueCaseSensitive));
         return result;
     }

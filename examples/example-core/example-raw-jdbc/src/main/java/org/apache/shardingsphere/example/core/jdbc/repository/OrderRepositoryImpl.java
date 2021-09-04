@@ -94,7 +94,7 @@ public class OrderRepositoryImpl implements OrderRepository {
 
     @Override
     public List<Order> selectAll() throws SQLException {
-        String sql = "SELECT * FROM t_order";
+        String sql = "SELECT * FROM t_order limit 1, 2";
         return getOrders(sql);
     }
 

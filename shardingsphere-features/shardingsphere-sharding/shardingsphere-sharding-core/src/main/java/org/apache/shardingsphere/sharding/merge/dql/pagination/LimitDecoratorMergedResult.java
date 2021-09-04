@@ -35,8 +35,10 @@ public final class LimitDecoratorMergedResult extends DecoratorMergedResult {
     private int rowNumber;
     
     public LimitDecoratorMergedResult(final MergedResult mergedResult, final PaginationContext pagination) throws SQLException {
+        //mergedResult放到DecoratorMergedResult
         super(mergedResult);
         this.pagination = pagination;
+        //是否limit的offset已经跳过全部数据
         skipAll = skipOffset();
     }
     
@@ -56,8 +58,10 @@ public final class LimitDecoratorMergedResult extends DecoratorMergedResult {
             return false;
         }
         if (!pagination.getActualRowCount().isPresent()) {
+            //如果limit的row部分为空，直接取到最后
             return getMergedResult().next();
         }
+        //根据rowNumber和还有下一条数据来限制limit的row
         return ++rowNumber <= pagination.getActualRowCount().get() && getMergedResult().next();
     }
 }

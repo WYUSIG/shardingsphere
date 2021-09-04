@@ -87,6 +87,7 @@ public final class ShardingDQLResultMerger implements ResultMerger {
         }
         //select语句有去重distinct
         if (isNeedProcessDistinctRow(selectStatementContext)) {
+            //给select每一列都添加selectStatementContext的GroupByItems
             setGroupByForDistinctRow(selectStatementContext);
             return getGroupByMergedResult(queryResults, selectStatementContext, columnLabelIndexMap, schema);
         }
@@ -116,7 +117,7 @@ public final class ShardingDQLResultMerger implements ResultMerger {
     
     private MergedResult getGroupByMergedResult(final List<QueryResult> queryResults, final SelectStatementContext selectStatementContext,
                                                 final Map<String, Integer> columnLabelIndexMap, final ShardingSphereSchema schema) throws SQLException {
-        //如果group by的字段和order by的字段相同，则使用流式归并，否则使用内存归并
+        //如果group by的字段和order by的字段相同，则使用流式归并，否则使用内存归并，区别在于能否使用优先队列
         return selectStatementContext.isSameGroupByAndOrderByItems()
                 ? new GroupByStreamMergedResult(columnLabelIndexMap, queryResults, selectStatementContext, schema)
                 : new GroupByMemoryMergedResult(queryResults, selectStatementContext, schema);
@@ -127,7 +128,9 @@ public final class ShardingDQLResultMerger implements ResultMerger {
     }
     
     private MergedResult decorate(final List<QueryResult> queryResults, final SelectStatementContext selectStatementContext, final MergedResult mergedResult) throws SQLException {
+        //如果有having，过滤掉having不成立的数据，主要是因为having可以使用聚合函数，且定义为在查询返回结果集以后，对查询结果进行的过滤操作
         MergedResult decoratedMergedResult = decorateHavingContext(queryResults, selectStatementContext, mergedResult);
+        //分页归并
         return decoratePaginationContext(queryResults, selectStatementContext, decoratedMergedResult);
     }
     
@@ -144,6 +147,7 @@ public final class ShardingDQLResultMerger implements ResultMerger {
         if (!paginationContext.isHasPagination() || 1 == queryResults.size()) {
             return mergedResult;
         }
+        //获取格式化的数据库类型名
         String trunkDatabaseName = DatabaseTypeRegistry.getTrunkDatabaseType(databaseType.getName()).getName();
         if ("MySQL".equals(trunkDatabaseName) || "PostgreSQL".equals(trunkDatabaseName)) {
             return new LimitDecoratorMergedResult(mergedResult, paginationContext);

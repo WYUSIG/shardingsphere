@@ -44,7 +44,9 @@ public final class AverageAggregationUnit implements AggregationUnit {
         if (null == sum) {
             sum = new BigDecimal("0");
         }
+        //取第一个元素就是count，累加
         count = count.add(new BigDecimal(values.get(0).toString()));
+        //取第二个元素就是sum，累加
         sum = sum.add(new BigDecimal(values.get(1).toString()));
     }
     

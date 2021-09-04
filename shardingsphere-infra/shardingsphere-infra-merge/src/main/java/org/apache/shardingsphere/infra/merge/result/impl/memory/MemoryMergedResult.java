@@ -59,6 +59,7 @@ public abstract class MemoryMergedResult<T extends ShardingSphereRule> implement
         List<MemoryQueryResultRow> memoryQueryResultRowList = init(rule, schema, sqlStatementContext, queryResults, null);
         memoryResultSetRows = memoryQueryResultRowList.iterator();
         if (!memoryQueryResultRowList.isEmpty()) {
+            //当前行为第一行
             currentResultSetRow = memoryQueryResultRowList.get(0);
         }
     }
@@ -68,7 +69,9 @@ public abstract class MemoryMergedResult<T extends ShardingSphereRule> implement
     
     @Override
     public final boolean next() {
+        //如果数据没有取完
         if (memoryResultSetRows.hasNext()) {
+            //当前行为下一行
             currentResultSetRow = memoryResultSetRows.next();
             return true;
         }

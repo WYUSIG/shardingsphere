@@ -54,24 +54,35 @@ public final class HavingDecoratorMergedResult extends MemoryMergedResult<Shardi
         ProjectionsContext projectionsContext = selectStatementContext.getProjectionsContext();
         List<MemoryQueryResultRow> result = new LinkedList<>();
         while (mergedResult.next()) {
+            //把mergedResult遍历，构造成一个个MemoryQueryResultRow(一行数据)
             MemoryQueryResultRow memoryResultSetRow = new MemoryQueryResultRow(mergedResult, projectionsContext.getProjections().size());
+            //如果sql含有having
             if (havingContext.isHasHaving()) {
-                // TODO support more expr scenario, like in, between and ... 
+                // TODO support more expr scenario, like in, between and ...
+                //执行判断having条件是否成立(groovy)
                 Object evaluate = evaluate(generateHavingExpression(havingContext, memoryResultSetRow));
                 if (evaluate instanceof Boolean && ((Boolean) evaluate)) {
+                    //having条件成立则添加
                     result.add(memoryResultSetRow);
                 }
             } else {
+                //sql没有having，直接添加
                 result.add(memoryResultSetRow);
             }
         }
         return result;
     }
-    
+
+    /**
+     * 构建having表达式
+     */
     private String generateHavingExpression(final HavingContext havingContext, final MemoryQueryResultRow memoryResultSetRow) {
+        //获取原始的having子句(转成小写)
         String expression = havingContext.getHavingExpression().toLowerCase();
+        //替换一些规则符号
         expression = expression.replaceAll("\\s+=\\s+", " == ").replaceAll("\\s+and\\s+", " && ").replaceAll("\\s+or\\s+", " || ");
         for (HavingColumn each : havingContext.getColumns()) {
+            //把查询结果字段值放进去表达式
             expression = expression.replace(each.getSegment().getIdentifier().getValue().toLowerCase(), memoryResultSetRow.getCell(each.getIndex()).toString());
         }
         return expression;
