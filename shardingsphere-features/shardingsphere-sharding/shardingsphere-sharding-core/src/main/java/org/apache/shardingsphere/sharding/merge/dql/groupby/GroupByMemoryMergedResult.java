@@ -60,7 +60,7 @@ public final class GroupByMemoryMergedResult extends MemoryMergedResult<Sharding
     protected List<MemoryQueryResultRow> init(final ShardingRule shardingRule, final ShardingSphereSchema schema, 
                                               final SQLStatementContext sqlStatementContext, final List<QueryResult> queryResults, final MergedResult mergedResult) throws SQLException {
         SelectStatementContext selectStatementContext = (SelectStatementContext) sqlStatementContext;
-        //一组group by数据 -> 一行数据
+        //一组group by数据 -> 一行数据 id,name
         Map<GroupByValue, MemoryQueryResultRow> dataMap = new HashMap<>(1024);
         //一组group by数据 -> 该组的聚合函数
         Map<GroupByValue, Map<AggregationProjection, AggregationUnit>> aggregationMap = new HashMap<>(1024);

@@ -244,4 +244,4 @@ public final class TableToken extends SQLToken implements Substitutable, RouteUn
 ![](https://sign-pic-1.oss-cn-shenzhen.aliyuncs.com/img/1630229516(1).jpg)
 
 
-
+>E:\opensource\shardingsphere\docs\document\content\features\sharding\principle\rewrite.cn.md

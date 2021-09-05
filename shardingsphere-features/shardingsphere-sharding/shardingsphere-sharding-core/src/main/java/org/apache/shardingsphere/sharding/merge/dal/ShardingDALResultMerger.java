@@ -53,6 +53,7 @@ public final class ShardingDALResultMerger implements ResultMerger {
     public MergedResult merge(final List<QueryResult> queryResults, final SQLStatementContext<?> sqlStatementContext, final ShardingSphereSchema schema) throws SQLException {
         SQLStatement dalStatement = sqlStatementContext.getSqlStatement();
         if (dalStatement instanceof MySQLShowDatabasesStatement) {
+            //show databases 直接包装逻辑数据库名进去返回
             return new SingleLocalDataMergedResult(Collections.singletonList(DefaultSchema.LOGIC_NAME));
         }
         if (dalStatement instanceof MySQLShowTablesStatement || dalStatement instanceof MySQLShowTableStatusStatement) {
