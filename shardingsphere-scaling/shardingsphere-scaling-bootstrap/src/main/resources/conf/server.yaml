@@ -20,8 +20,8 @@ scaling:
   blockQueueSize: 10000
   workerThread: 30
 
-#governance:
-#  name: governance_ds
-#  registryCenter:
-#    type: ZooKeeper
-#    serverLists: localhost:2181
+governance:
+  name: governance_ds
+  registryCenter:
+    type: ZooKeeper
+    serverLists: localhost:2181
