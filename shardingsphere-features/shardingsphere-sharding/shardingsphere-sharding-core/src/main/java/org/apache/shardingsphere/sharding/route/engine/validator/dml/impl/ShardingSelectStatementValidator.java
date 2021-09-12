@@ -37,6 +37,7 @@ public final class ShardingSelectStatementValidator extends ShardingDMLStatement
     @Override
     public void preValidate(final ShardingRule shardingRule, final SQLStatementContext<SelectStatement> sqlStatementContext, 
                             final List<Object> parameters, final ShardingSphereSchema schema) {
+        //如果含有子查询 且 配置能找到该sql所关联表名的分片逻辑表名不为空
         if (isNeedMergeShardingValues(sqlStatementContext, shardingRule)) {
             needCheckDatabaseInstance = checkSubqueryShardingValues(shardingRule, sqlStatementContext, parameters, schema);
         }

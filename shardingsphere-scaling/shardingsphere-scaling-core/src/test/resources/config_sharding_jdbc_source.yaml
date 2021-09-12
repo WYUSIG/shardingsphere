@@ -1,0 +1,31 @@
+dataSources:
+  ds_0:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    jdbcUrl: jdbc:mysql://127.0.0.1:3306/demo_scaling_ds_0?serverTimezone=UTC&useSSL=false
+    username: root
+    password:
+rules:
+  - !SHARDING
+    defaultDatabaseStrategy:
+      standard:
+        shardingAlgorithmName: default_db_inline
+        shardingColumn: user_id
+    tables:
+      t_order:
+        actualDataNodes: ds_0.t_order
+        keyGenerateStrategy:
+          column: order_id
+          keyGeneratorName: snowflake
+        tableStrategy:
+          standard:
+            shardingAlgorithmName: t_order_tbl_inline
+            shardingColumn: order_id
+    shardingAlgorithms:
+      default_db_inline:
+        type: INLINE
+        props:
+          algorithm-expression: ds_0
+      t_order_tbl_inline:
+        type: INLINE
+        props:
+          algorithm-expression: t_order

@@ -17,12 +17,14 @@
 
 package org.apache.shardingsphere.scaling.core.util;
 
+import com.google.gson.Gson;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.apache.shardingsphere.scaling.core.config.JobConfiguration;
 import org.apache.shardingsphere.scaling.core.config.RuleConfiguration;
 import org.apache.shardingsphere.scaling.core.config.datasource.ShardingSphereJDBCDataSourceConfiguration;
 import org.apache.shardingsphere.scaling.core.config.datasource.StandardJDBCDataSourceConfiguration;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -75,5 +77,38 @@ public final class ResourceUtil {
         try (InputStream in = ResourceUtil.class.getResourceAsStream(fileName)) {
             return IOUtils.toString(in, StandardCharsets.UTF_8);
         }
+    }
+
+    @Test
+    public void test() {
+        JobConfiguration jobConfiguration = new JobConfiguration();
+
+        RuleConfiguration ruleConfiguration = new RuleConfiguration();
+        ruleConfiguration.setSource(new ShardingSphereJDBCDataSourceConfiguration(readFileToString("/config_sharding_jdbc_source.yaml")).wrap());
+        ruleConfiguration.setTarget(new StandardJDBCDataSourceConfiguration(readFileToString("/config_standard_jdbc_target.yaml")).wrap());
+
+        jobConfiguration.setRuleConfig(ruleConfiguration);
+
+        String s = new Gson().toJson(jobConfiguration);
+        System.out.println(s);
+        s = "{\n" +
+                "\"ruleConfig\":{\n" +
+                "\"source\":{\n" +
+                "\"type\":\"JDBC\",\n" +
+                "\"parameter\":\"jdbcUrl: jdbc:mysql://127.0.0.1:3306/demo_scaling_ds_0?serverTimezone\\u003dUTC\\u0026useSSL\\u003dfalse\\r\\nusername: root\\r\\npassword:\"\n" +
+                "},\n" +
+                "\"target\":{\n" +
+                "\"type\":\"JDBC\",\n" +
+                "\"parameter\":\"jdbcUrl: jdbc:mysql://127.0.0.1:3306/demo_scaling_ds_1?serverTimezone\\u003dUTC\\u0026useSSL\\u003dfalse\\r\\nusername: root\\r\\npassword:\\r\\n\"\n" +
+                "}\n" +
+                "},\n" +
+                "\"handleConfig\":{\n" +
+                "\"concurrency\":3,\n" +
+                "\"retryTimes\":3,\n" +
+                "\"shardingItem\":0,\n" +
+                "\"shardingSize\":10000000,\n" +
+                "\"running\":true\n" +
+                "}\n" +
+                "}";
     }
 }

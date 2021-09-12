@@ -57,7 +57,9 @@ public final class HttpServerHandler extends SimpleChannelInboundHandler<FullHtt
     
     @Override
     protected void channelRead0(final ChannelHandlerContext context, final FullHttpRequest request) {
+        //请求path
         String requestPath = request.uri().toLowerCase();
+        //请求体，转成字符串
         String requestBody = request.content().toString(CharsetUtil.UTF_8);
         log.info("Http request path: {}", requestPath);
         log.info("Http request body: {}", requestBody);
@@ -87,8 +89,14 @@ public final class HttpServerHandler extends SimpleChannelInboundHandler<FullHtt
         }
         response(ResponseContentUtil.handleBadRequest("Not support request!"), context, HttpResponseStatus.BAD_REQUEST);
     }
-    
+
+    /**
+     * 开启一个数据迁移任务
+     * @param context netty 管道上下文
+     * @param requestBody 请求体
+     */
     private void startJob(final ChannelHandlerContext context, final String requestBody) {
+        //把请求体json字符串转成JobConfiguration对象，调用ScalingAPI的start方法
         Optional<Long> jobId = scalingAPI.start(GSON.fromJson(requestBody, JobConfiguration.class));
         if (jobId.isPresent()) {
             response(ResponseContentUtil.build(jobId.get()), context, HttpResponseStatus.OK);

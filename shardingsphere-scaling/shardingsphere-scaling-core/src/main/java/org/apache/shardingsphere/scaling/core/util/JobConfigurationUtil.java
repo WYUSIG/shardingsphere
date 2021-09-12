@@ -89,13 +89,17 @@ public final class JobConfigurationUtil {
      * @param jobConfig job configuration
      */
     public static void fillInProperties(final JobConfiguration jobConfig) {
+        //传过来的handle配置
         HandleConfiguration handleConfig = jobConfig.getHandleConfig();
         if (null == handleConfig.getJobId()) {
+            //如果传过来没有jobId,生成一个
             handleConfig.setJobId(generateKey());
         }
         if (Strings.isNullOrEmpty(handleConfig.getDatabaseType())) {
+            //如果handle配置的数据库类型为空，则把rule配置的源数据源数据库类型赋值给handle配置的数据库类型
             handleConfig.setDatabaseType(jobConfig.getRuleConfig().getSource().unwrap().getDatabaseType().getName());
         }
+        //如果handle配置的sharding tables为空
         if (null == jobConfig.getHandleConfig().getShardingTables()) {
             Map<String, String> shouldScalingActualDataNodes = getShouldScalingActualDataNodes(jobConfig);
             handleConfig.setShardingTables(groupByDataSource(shouldScalingActualDataNodes.values()));
@@ -104,10 +108,13 @@ public final class JobConfigurationUtil {
     }
     
     private static Map<String, String> getShouldScalingActualDataNodes(final JobConfiguration jobConfig) {
+        //获取rule配置的源数据库配置
         ScalingDataSourceConfiguration sourceConfig = jobConfig.getRuleConfig().getSource().unwrap();
+        //数据库配置类型必须是ShardingSphereJDBCDataSourceConfiguration
         Preconditions.checkState(sourceConfig instanceof ShardingSphereJDBCDataSourceConfiguration,
                 "Only ShardingSphereJdbc type of source ScalingDataSourceConfiguration is supported.");
         ShardingSphereJDBCDataSourceConfiguration source = (ShardingSphereJDBCDataSourceConfiguration) sourceConfig;
+        //如果目标数据库配置类型不是ShardingSphereJDBCDataSourceConfiguration
         if (!(jobConfig.getRuleConfig().getTarget().unwrap() instanceof ShardingSphereJDBCDataSourceConfiguration)) {
             return getShardingRuleConfigMap(source.getRootRuleConfigs()).entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, each -> each.getValue().getActualDataNodes()));

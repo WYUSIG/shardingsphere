@@ -75,14 +75,19 @@ public abstract class ShardingDMLStatementValidator<T extends SQLStatement> impl
     
     protected boolean checkSubqueryShardingValues(final ShardingRule shardingRule, final SQLStatementContext sqlStatementContext,
         final List<Object> parameters, final ShardingSphereSchema schema) {
+        //遍历sql所有表名
         for (String each : sqlStatementContext.getTablesContext().getTableNames()) {
+            //获取该表配置
             Optional<TableRule> tableRule = shardingRule.findTableRule(each);
+            //如果表配置不为空 且 是hint强制分片策略 且 HintManager里面的database、tables值不为空
             if (tableRule.isPresent() && isRoutingByHint(shardingRule, tableRule.get())
                 && !HintManager.getDatabaseShardingValues(each).isEmpty() && !HintManager.getTableShardingValues(each).isEmpty()) {
                 return false;
             }
         }
+        //创建ShardingConditions
         ShardingConditions shardingConditions = createShardingConditions(sqlStatementContext, parameters, schema, shardingRule);
+        //如果分片键大于1
         return shardingConditions.getConditions().size() > 1 && !isSameShardingCondition(shardingRule, shardingConditions);
     }
     
@@ -154,9 +159,12 @@ public abstract class ShardingDMLStatementValidator<T extends SQLStatement> impl
     }
     
     protected boolean isNeedMergeShardingValues(final SQLStatementContext<?> sqlStatementContext, final ShardingRule rule) {
+        //判断是否是查询sql，且有子查询
         boolean selectContainsSubquery = sqlStatementContext instanceof SelectStatementContext && ((SelectStatementContext) sqlStatementContext).isContainsSubquery();
+        //判断是否是插入sql，且有select，且有select子查询
         boolean insertSelectContainsSubquery = sqlStatementContext instanceof InsertStatementContext && null != ((InsertStatementContext) sqlStatementContext).getInsertSelectContext()
             && ((InsertStatementContext) sqlStatementContext).getInsertSelectContext().getSelectStatementContext().isContainsSubquery();
+        //如果含有子查询 且 配置能找到该sql所关联表名的分片逻辑表名不为空
         return (selectContainsSubquery || insertSelectContainsSubquery) && !rule.getShardingLogicTableNames(sqlStatementContext.getTablesContext().getTableNames()).isEmpty();
     }
 }

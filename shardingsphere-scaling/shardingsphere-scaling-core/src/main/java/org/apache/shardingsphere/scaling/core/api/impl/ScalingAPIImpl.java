@@ -81,6 +81,7 @@ public final class ScalingAPIImpl implements ScalingAPI {
     
     @Override
     public Optional<Long> start(final JobConfiguration jobConfig) {
+        //把缺失的配置项进行补充
         JobConfigurationUtil.fillInProperties(jobConfig);
         if (jobConfig.getHandleConfig().getShardingTotalCount() == 0) {
             log.warn("Invalid scaling job config!");
