@@ -60,6 +60,7 @@ public final class InsertClauseShardingConditionEngine implements ShardingCondit
     public List<ShardingCondition> createShardingConditions(final InsertStatementContext sqlStatementContext, final List<Object> parameters) {
         List<ShardingCondition> result = null == sqlStatementContext.getInsertSelectContext()
                 ? createShardingConditionsWithInsertValues(sqlStatementContext, parameters) : createShardingConditionsWithInsertSelect(sqlStatementContext, parameters);
+        //自动生成主键是否是分片
         appendGeneratedKeyConditions(sqlStatementContext, result);
         return result;
     }
@@ -151,8 +152,11 @@ public final class InsertClauseShardingConditionEngine implements ShardingCondit
     }
     
     private void appendGeneratedKeyConditions(final InsertStatementContext sqlStatementContext, final List<ShardingCondition> shardingConditions) {
+        //自动生成主键
         Optional<GeneratedKeyContext> generatedKey = sqlStatementContext.getGeneratedKeyContext();
+        //表名
         String tableName = sqlStatementContext.getSqlStatement().getTable().getTableName().getIdentifier().getValue();
+        //如果有自动生成主键，已经生成、且是分片键
         if (generatedKey.isPresent() && generatedKey.get().isGenerated()) {
             generatedKey.get().getGeneratedValues().addAll(generateKeys(tableName, sqlStatementContext.getValueListCount()));
             if (shardingRule.isShardingColumn(generatedKey.get().getColumnName(), tableName)) {

@@ -48,6 +48,7 @@ public final class SingleTablesRoutingEngine implements ShardingRouteEngine {
     
     @Override
     public void route(final RouteContext routeContext, final ShardingRule shardingRule) {
+        //如果是DDL或者所有逻辑表都是同一个数据库
         if (isDDLTableStatement() || shardingRule.isAllTablesInSameDataSource(logicTables)) {
             Set<String> existSingleTables = Sets.intersection(shardingRule.getSingleTableRules().keySet(), Sets.newHashSet(logicTables));
             if (!existSingleTables.isEmpty()) {
@@ -56,8 +57,10 @@ public final class SingleTablesRoutingEngine implements ShardingRouteEngine {
                 routeContext.getRouteUnits().add(getRandomRouteUnit(shardingRule));
             }
         } else {
+            //遍历逻辑表，查找singleTableRules，拿到数据库，添加到路由单元集合
             fillRouteContext(shardingRule, routeContext, logicTables);
             if (1 < routeContext.getRouteUnits().size()) {
+                //如果路由单元大于1，federated为true
                 routeContext.setFederated(true);
             }
         }

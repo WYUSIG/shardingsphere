@@ -65,21 +65,27 @@ public final class WhereClauseShardingConditionEngine implements ShardingConditi
     
     @Override
     public List<ShardingCondition> createShardingConditions(final SQLStatementContext<?> sqlStatementContext, final List<Object> parameters) {
+        //如果select没有where
         if (!(sqlStatementContext instanceof WhereAvailable)) {
             return Collections.emptyList();
         }
         List<ShardingCondition> result = new ArrayList<>();
+        //where的sharding condition集合
         ((WhereAvailable) sqlStatementContext).getWhere().ifPresent(segment -> result.addAll(createShardingConditions(sqlStatementContext, segment.getExpr(), parameters)));
+        //获取join
         Collection<WhereSegment> joinWhereSegments = sqlStatementContext.getSqlStatement() instanceof SelectStatement
                 ? WhereSegmentExtractUtils.getJoinWhereSegments((SelectStatement) sqlStatementContext.getSqlStatement()) : Collections.emptyList();
+        //join的sharding condition集合
         for (WhereSegment each : joinWhereSegments) {
             Collection<ShardingCondition> joinShardingConditions = createShardingConditions(sqlStatementContext, each.getExpr(), parameters);
             if (!result.containsAll(joinShardingConditions)) {
                 result.addAll(joinShardingConditions);
             }
         }
+        //子查询
         Collection<WhereSegment> subqueryWhereSegments = sqlStatementContext.getSqlStatement() instanceof SelectStatement
                 ? WhereSegmentExtractUtils.getSubqueryWhereSegments((SelectStatement) sqlStatementContext.getSqlStatement()) : Collections.emptyList();
+        //子查询sharding condition集合
         for (WhereSegment each : subqueryWhereSegments) {
             Collection<ShardingCondition> subqueryShardingConditions = createShardingConditions(sqlStatementContext, each.getExpr(), parameters);
             if (!result.containsAll(subqueryShardingConditions)) {

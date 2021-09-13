@@ -60,7 +60,7 @@ public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
         //sql最后是否需要合并结果集
         boolean needMergeShardingValues = isNeedMergeShardingValues(logicSQL.getSqlStatementContext(), rule);
         if (sqlStatement instanceof DMLStatement && needMergeShardingValues) {
-            //如果最后需要合并结果集，直接取最后一个分片条件
+            //如果是DML而且最后需要合并结果集，直接取最后一个分片条件
             mergeShardingConditions(shardingConditions);
         }
         //创建ShardingRouteEngine，再调用ShardingRouteEngine#route，对路由上下文进行添加路由单元
@@ -88,9 +88,12 @@ public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
     }
     
     private boolean isNeedMergeShardingValues(final SQLStatementContext<?> sqlStatementContext, final ShardingRule rule) {
+        //是否含有子查询
         boolean selectContainsSubquery = sqlStatementContext instanceof SelectStatementContext && ((SelectStatementContext) sqlStatementContext).isContainsSubquery();
+        //insert有select 且 有子查询
         boolean insertSelectContainsSubquery = sqlStatementContext instanceof InsertStatementContext && null != ((InsertStatementContext) sqlStatementContext).getInsertSelectContext()
                 && ((InsertStatementContext) sqlStatementContext).getInsertSelectContext().getSelectStatementContext().isContainsSubquery();
+        //如果含有子查询而且这个表含有分片逻辑表
         return (selectContainsSubquery || insertSelectContainsSubquery) && !rule.getShardingLogicTableNames(sqlStatementContext.getTablesContext().getTableNames()).isEmpty();
     }
     

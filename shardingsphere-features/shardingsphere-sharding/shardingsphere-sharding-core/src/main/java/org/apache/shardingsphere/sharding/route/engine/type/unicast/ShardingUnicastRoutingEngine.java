@@ -48,20 +48,28 @@ public final class ShardingUnicastRoutingEngine implements ShardingRouteEngine {
     
     @Override
     public void route(final RouteContext routeContext, final ShardingRule shardingRule) {
+        //随机一个数据库名
         String dataSourceName = getRandomDataSourceName(shardingRule.getDataSourceNames());
         RouteMapper dataSourceMapper = new RouteMapper(dataSourceName, dataSourceName);
+        //如果全部是广播表
         if (shardingRule.isAllBroadcastTables(logicTables)) {
             List<RouteMapper> tableMappers = logicTables.stream().map(each -> new RouteMapper(each, each)).collect(Collectors.toCollection(() -> new ArrayList<>(logicTables.size())));
+            //添加到routeContext
             routeContext.getRouteUnits().add(new RouteUnit(dataSourceMapper, tableMappers));
         } else if (logicTables.isEmpty()) {
+            //如果逻辑表名为空，那么RouteUnit只有数据库的逻辑名和实际名
             routeContext.getRouteUnits().add(new RouteUnit(dataSourceMapper, Collections.emptyList()));
         } else if (1 == logicTables.size()) {
+            //如果只有一个逻辑表
             String logicTableName = logicTables.iterator().next();
             if (!shardingRule.findTableRule(logicTableName).isPresent()) {
+                //如果找不到该逻辑表的配置，那么RouteUnit只有数据库的逻辑名和实际名
                 routeContext.getRouteUnits().add(new RouteUnit(dataSourceMapper, Collections.emptyList()));
                 return;
             }
+            //获取该逻辑表的一个节点
             DataNode dataNode = shardingRule.getDataNode(logicTableName);
+            //获取逻辑表节点的数据库名、表名，创建RouteUnit
             routeContext.getRouteUnits().add(new RouteUnit(new RouteMapper(dataNode.getDataSourceName(), dataNode.getDataSourceName()),
                     Collections.singletonList(new RouteMapper(logicTableName, dataNode.getTableName()))));
         } else {
@@ -73,8 +81,11 @@ public final class ShardingUnicastRoutingEngine implements ShardingRouteEngine {
         List<RouteMapper> tableMappers = new ArrayList<>(logicTables.size());
         Set<String> availableDatasourceNames = Collections.emptySet();
         boolean first = true;
+        //遍历逻辑表
         for (String each : logicTables) {
+            //该逻辑表的配置
             TableRule tableRule = shardingRule.getTableRule(each);
+            //获取逻辑表的节点
             DataNode dataNode = tableRule.getActualDataNodes().get(0);
             tableMappers.add(new RouteMapper(each, dataNode.getTableName()));
             Set<String> currentDataSourceNames = tableRule.getActualDataNodes().stream().map(DataNode::getDataSourceName).collect(
@@ -89,7 +100,9 @@ public final class ShardingUnicastRoutingEngine implements ShardingRouteEngine {
         if (availableDatasourceNames.isEmpty()) {
             throw new ShardingSphereConfigurationException("Cannot find actual datasource intersection for logic tables: %s", logicTables);
         }
+        //从可用数据库中随机获取一个数据库
         String dataSourceName = getRandomDataSourceName(availableDatasourceNames);
+        //随机数据库，逻辑表，实际表
         routeContext.getRouteUnits().add(new RouteUnit(new RouteMapper(dataSourceName, dataSourceName), tableMappers));
     }
     

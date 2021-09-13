@@ -160,13 +160,18 @@ public final class ShardingRouteEngineFactory {
     private static ShardingRouteEngine getDQLRoutingEngine(final ShardingRule shardingRule, final SQLStatementContext<?> sqlStatementContext,
                                                            final ShardingConditions shardingConditions, final ConfigurationProperties props,
                                                            final SQLStatement sqlStatement, final Collection<String> tableNames) {
+        //如果是广播表，select只命中一个数据库，其他则命中全部数据库
         if (shardingRule.isAllBroadcastTables(tableNames)) {
             return sqlStatement instanceof SelectStatement ? new ShardingUnicastRoutingEngine(tableNames) : new ShardingDatabaseBroadcastRoutingEngine();
         }
+        //如果是DML而且命中分片都是AlwaysFalseShardingCondition 或者 逻辑表为空
         if (sqlStatementContext.getSqlStatement() instanceof DMLStatement && shardingConditions.isAlwaysFalse() || tableNames.isEmpty()) {
+            //只命中一个数据库
             return new ShardingUnicastRoutingEngine(tableNames);
         }
+        //如果逻辑表配置不为空
         if (!shardingRule.tableRuleExists(tableNames)) {
+            //singleTableRules
             return new SingleTablesRoutingEngine(tableNames, sqlStatement);
         }
         if (shardingRule.isAllShardingTables(tableNames) && 1 == tableNames.size() || shardingRule.isAllBindingTables(tableNames)) {
@@ -176,6 +181,7 @@ public final class ShardingRouteEngineFactory {
             return new ShardingFederatedRoutingEngine(tableNames);
         }
         // TODO config for cartesian set
+        //多分片键
         return new ShardingComplexRoutingEngine(tableNames, shardingConditions, props);
     }
     
